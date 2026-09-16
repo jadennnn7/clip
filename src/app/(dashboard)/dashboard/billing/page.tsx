@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { PageHeader } from '@/components/dashboard/PageHeader'
 import { cn } from '@/lib/utils'
 
 export default function BillingPage() {
@@ -14,13 +15,13 @@ export default function BillingPage() {
 
   return (
     <ScrollArea className="h-full">
-      <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
-        <h1 className="mb-1 text-xl font-semibold tracking-tight">Abo & Verbrauch</h1>
-        <p className="mb-6 text-sm text-muted-foreground">
-          Abgerechnet wird nach Render-Minuten und verbundenen Kanälen.
-        </p>
+      <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
+        <PageHeader
+          title="Abo & Verbrauch"
+          description="Abgerechnet wird nach Render-Minuten und verbundenen Kanälen — das sind die beiden Größen, die tatsächlich Kosten verursachen."
+        />
 
-        <Card className="mb-8">
+        <Card className="mb-8 shadow-xs">
           <CardHeader>
             <CardTitle className="text-base">Aktueller Verbrauch</CardTitle>
             <CardDescription>
@@ -40,14 +41,20 @@ export default function BillingPage() {
           {PLANS.map((plan) => {
             const isCurrent = plan.tier === current.tier
             return (
-              <Card key={plan.tier} className={cn(isCurrent && 'border-primary')}>
+              <Card
+                key={plan.tier}
+                className={cn(
+                  'transition-ui shadow-xs hover:shadow-sm',
+                  isCurrent && 'border-primary/60 shadow-sm',
+                )}
+              >
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base">{plan.name}</CardTitle>
                     {isCurrent ? <Badge variant="secondary">Aktuell</Badge> : null}
                   </div>
                   <CardDescription>
-                    <span className="text-2xl font-semibold text-foreground">
+                    <span className="text-3xl font-semibold tracking-tight text-foreground">
                       {plan.priceMonthly} €
                     </span>
                     <span className="text-xs"> / Monat</span>

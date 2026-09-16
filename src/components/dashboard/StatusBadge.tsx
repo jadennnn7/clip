@@ -1,24 +1,51 @@
 import React from 'react'
-import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { ProjectStatus } from '@/types/database'
 
-const STATUS_CONFIG: Record<ProjectStatus, { label: string; className: string }> = {
-  draft: { label: 'Entwurf', className: 'bg-muted text-muted-foreground' },
-  queued: { label: 'In Warteschlange', className: 'bg-slate-500/15 text-slate-600 dark:text-slate-300' },
-  downloading: { label: 'Lädt herunter', className: 'bg-blue-500/15 text-blue-600 dark:text-blue-400' },
-  transcribing: { label: 'Transkribiert', className: 'bg-blue-500/15 text-blue-600 dark:text-blue-400' },
-  analyzing: { label: 'Analysiert', className: 'bg-violet-500/15 text-violet-600 dark:text-violet-400' },
-  reframing: { label: 'Reframing', className: 'bg-violet-500/15 text-violet-600 dark:text-violet-400' },
-  ready: { label: 'Fertig', className: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' },
-  error: { label: 'Fehler', className: 'bg-destructive/15 text-destructive' },
+const STATUS_CONFIG: Record<
+  ProjectStatus,
+  { label: string; dot: string; pulse: boolean }
+> = {
+  draft: { label: 'Entwurf', dot: 'bg-muted-foreground/50', pulse: false },
+  queued: { label: 'In Warteschlange', dot: 'bg-slate-500', pulse: false },
+  downloading: { label: 'Lädt herunter', dot: 'bg-blue-500', pulse: true },
+  transcribing: { label: 'Transkribiert', dot: 'bg-blue-500', pulse: true },
+  analyzing: { label: 'Analysiert', dot: 'bg-violet-500', pulse: true },
+  reframing: { label: 'Reframing', dot: 'bg-violet-500', pulse: true },
+  ready: { label: 'Fertig', dot: 'bg-emerald-500', pulse: false },
+  error: { label: 'Fehler', dot: 'bg-destructive', pulse: false },
 }
 
+/**
+ * Statusanzeige als Punkt plus Text.
+ *
+ * Vorher eine gefüllte Pille: In einer Tabelle mit fünf Zeilen entstehen daraus
+ * fünf farbige Flächen, die um Aufmerksamkeit konkurrieren, obwohl der Status
+ * die zweitwichtigste Information der Zeile ist.
+ *
+ * Die Farbe sitzt jetzt ausschließlich auf dem Punkt, der Text bleibt in der
+ * normalen Schriftfarbe. Das hält die Tabelle ruhig und erfüllt zugleich die
+ * Regel, dass Statusfarben nie allein stehen — die Bedeutung steht daneben.
+ */
 export function StatusBadge({ status }: { status: ProjectStatus }) {
   const config = STATUS_CONFIG[status]
+
   return (
-    <Badge variant="secondary" className={cn('border-0 font-medium', config.className)}>
+    <span className="inline-flex items-center gap-2 text-sm whitespace-nowrap">
+      <span className="relative flex size-2 shrink-0">
+        {/* Laufende Schritte pulsieren — ohne Bewegung ist „arbeitet gerade"
+            optisch nicht von „wartet" zu unterscheiden. */}
+        {config.pulse ? (
+          <span
+            className={cn(
+              'absolute inline-flex size-full animate-ping rounded-full opacity-60',
+              config.dot,
+            )}
+          />
+        ) : null}
+        <span className={cn('relative inline-flex size-2 rounded-full', config.dot)} />
+      </span>
       {config.label}
-    </Badge>
+    </span>
   )
 }

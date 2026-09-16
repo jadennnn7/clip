@@ -72,16 +72,21 @@ export function TranscriptEditor({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2 border-b px-3 py-2 text-xs text-muted-foreground">
-        <Info className="size-3.5 shrink-0" />
-        <span>
-          Klick springt · Doppelklick korrigiert · <kbd className="rounded border bg-muted px-1 font-mono">Backspace</kbd> schneidet
+      <div className="flex shrink-0 items-start gap-2 border-b bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground">
+        <Info className="mt-px size-3.5 shrink-0" />
+        <span className="leading-relaxed">
+          Klick springt · Doppelklick korrigiert ·{' '}
+          <kbd className="rounded border bg-background px-1 font-mono">Backspace</kbd> schneidet
           das Wort heraus
         </span>
       </div>
 
       <ScrollArea className="flex-1">
-        <p className="flex flex-wrap gap-x-1 gap-y-1.5 p-3 text-[15px] leading-8">
+        {/* Der Fließtext soll sich wie Prosa lesen, nicht wie eine Liste von
+            Schaltflächen. Deshalb enge Wortabstände und ein ruhiger Zeilenfall;
+            die Klickfläche kommt über Innenabstand, der negative Außenabstand
+            holt die optische Laufweite zurück. */}
+        <p className="flex flex-wrap gap-x-0.5 gap-y-1 p-4 text-[15px] leading-[1.95]">
           {clip.words.map((word, index) => {
             const isActive = currentTime >= word.start && currentTime < word.end
             const isRemoved = removed.has(index)
@@ -123,9 +128,9 @@ export function TranscriptEditor({
                 onKeyDown={(event) => handleKeyDown(event, index)}
                 title={`${word.start.toFixed(2)}s – ${word.end.toFixed(2)}s`}
                 className={cn(
-                  'cursor-pointer rounded px-1 transition-colors select-none',
+                  'transition-ui cursor-pointer rounded px-1 select-none',
                   'hover:bg-accent focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',
-                  isActive && 'bg-primary text-primary-foreground',
+                  isActive && 'bg-primary font-medium text-primary-foreground',
                   !isActive && isPast && 'text-muted-foreground',
                   isRemoved && 'text-destructive/60 line-through decoration-2',
                   focusedIndex === index && !isActive && 'bg-accent',
@@ -139,8 +144,11 @@ export function TranscriptEditor({
       </ScrollArea>
 
       {removed.size > 0 ? (
-        <div className="border-t px-3 py-2 text-xs text-muted-foreground">
-          {removed.size} {removed.size === 1 ? 'Wort' : 'Wörter'} aus dem Cut entfernt
+        <div className="flex shrink-0 items-center gap-2 border-t bg-muted/30 px-3 py-2.5 text-xs">
+          <span className="size-1.5 rounded-full bg-destructive" />
+          <span className="text-muted-foreground">
+            {removed.size} {removed.size === 1 ? 'Wort' : 'Wörter'} aus dem Cut entfernt
+          </span>
         </div>
       ) : null}
     </div>

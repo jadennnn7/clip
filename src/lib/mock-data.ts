@@ -1,4 +1,10 @@
-import type { Clip, Project, TranscriptWord } from '@/types/database'
+import type {
+  Clip,
+  Project,
+  ScheduleStatus,
+  SocialPlatform,
+  TranscriptWord,
+} from '@/types/database'
 import type { WaveformData } from '@/types/editor'
 import { CAPTION_PRESETS } from '../../remotion/captions/presets'
 
@@ -289,4 +295,69 @@ export const mockClipCounts: Record<string, number> = {
   'p-003': 0,
   'p-004': 0,
   'p-005': 0,
+}
+
+/**
+ * Veröffentlichungs-Queue.
+ *
+ * Liegt hier statt in der Kalenderseite, weil das Dashboard dieselben Zahlen
+ * für seine Kennzahlen braucht — zwei Listen, die dasselbe darstellen sollen,
+ * laufen unweigerlich auseinander.
+ */
+export interface QueueEntry {
+  id: string
+  clipTitle: string
+  score: number
+  platform: SocialPlatform
+  publishAt: string
+  status: ScheduleStatus
+}
+
+export const mockQueue: QueueEntry[] = [
+  {
+    id: 'ps-1',
+    clipTitle: 'Der wahre Grund, warum 90% aller Creator aufgeben',
+    score: 94,
+    platform: 'youtube',
+    publishAt: '2026-09-16T17:00:00.000Z',
+    status: 'pending',
+  },
+  {
+    id: 'ps-2',
+    clipTitle: 'Der wahre Grund, warum 90% aller Creator aufgeben',
+    score: 94,
+    platform: 'tiktok',
+    publishAt: '2026-09-16T19:30:00.000Z',
+    status: 'needs_review',
+  },
+  {
+    id: 'ps-3',
+    clipTitle: 'Diese eine Frage hat mein Business verändert',
+    score: 88,
+    platform: 'youtube',
+    publishAt: '2026-09-17T12:00:00.000Z',
+    status: 'pending',
+  },
+  {
+    id: 'ps-4',
+    clipTitle: 'Warum dein Content niemanden erreicht',
+    score: 83,
+    platform: 'instagram',
+    publishAt: '2026-09-15T18:00:00.000Z',
+    status: 'published',
+  },
+  {
+    id: 'ps-5',
+    clipTitle: 'Der teuerste Fehler meiner Selbstständigkeit',
+    score: 79,
+    platform: 'youtube',
+    publishAt: '2026-09-15T09:00:00.000Z',
+    status: 'failed',
+  },
+]
+
+/** Guthaben des angemeldeten Nutzers (Phase 2: aus `profiles`). */
+export const mockUsage = {
+  renderMinutesUsed: 38.4,
+  renderMinutesLimit: 120,
 }

@@ -9,6 +9,7 @@ import { PlatformIcon } from '@/components/social/PlatformIcon'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { PageHeader } from '@/components/dashboard/PageHeader'
 
 /**
  * Plattform-Einschränkungen, die den vollautomatischen Betrieb begrenzen.
@@ -79,13 +80,11 @@ export default function ConnectionsPage() {
 
   return (
     <ScrollArea className="h-full">
-      <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6">
-        <div className="mb-6">
-          <h1 className="text-xl font-semibold tracking-tight">Verbundene Kanäle</h1>
-          <p className="text-sm text-muted-foreground">
-            Lege pro Kanal fest, wie weit die Automatik gehen darf.
-          </p>
-        </div>
+      <div className="mx-auto w-full max-w-4xl px-4 py-10 sm:px-6">
+        <PageHeader
+          title="Verbundene Kanäle"
+          description="Lege pro Kanal fest, wie weit die Automatik gehen darf. Nicht jede Plattform erlaubt vollautomatisches Veröffentlichen — wo sie es nicht tut, steht der Grund am Kanal."
+        />
 
         <div className="grid gap-4 sm:grid-cols-2">
           {accounts.map((account) => (
@@ -104,7 +103,7 @@ export default function ConnectionsPage() {
 
         {available.length > 0 ? (
           <>
-            <h2 className="mt-8 mb-3 text-sm font-medium">Weitere Kanäle verbinden</h2>
+            <h2 className="mt-10 mb-3 text-sm font-medium">Weitere Kanäle verbinden</h2>
             <div className="grid gap-3 sm:grid-cols-3">
               {available.map((platform) => (
                   <Card key={platform}>

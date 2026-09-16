@@ -1,7 +1,9 @@
 import React from 'react'
 import Link from 'next/link'
-import { Clapperboard, LayoutGrid, CalendarDays, Link2, CreditCard } from 'lucide-react'
+import { Clapperboard } from 'lucide-react'
 import { CreditMeter } from '@/components/dashboard/CreditMeter'
+import { DashboardNav } from '@/components/dashboard/DashboardNav'
+import { mockUsage } from '@/lib/mock-data'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -11,23 +13,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/theme-toggle'
-
-const NAV = [
-  { href: '/dashboard', label: 'Projekte', icon: LayoutGrid },
-  { href: '/dashboard/calendar', label: 'Kalender', icon: CalendarDays },
-  { href: '/dashboard/connections', label: 'Kanäle', icon: Link2 },
-  { href: '/dashboard/billing', label: 'Abo', icon: CreditCard },
-]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   // Phase 2: Profil kommt aus Supabase (`createClient()` → profiles).
+  // Die Guthabenwerte stammen aus derselben Quelle wie die Kennzahlen im
+  // Dashboard — zwei Stellen, die dasselbe anzeigen sollen, laufen sonst
+  // auseinander.
   const profile = {
     full_name: 'Jaden Tomic',
     email: 'tomicjaden@gmail.com',
-    render_minutes_used: 38.4,
-    render_minutes_limit: 120,
+    render_minutes_used: mockUsage.renderMinutesUsed,
+    render_minutes_limit: mockUsage.renderMinutesLimit,
   }
 
   const initials = profile.full_name
@@ -44,23 +41,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <span className="text-sm font-semibold tracking-tight">OmegaClip</span>
         </Link>
 
-        <nav className="hidden items-center gap-0.5 md:flex">
-          {NAV.map((item) => (
-            <Button
-              key={item.href}
-              variant="ghost"
-              size="sm"
-              className="gap-1.5"
-              // Base UI prüft, ob ein Button tatsächlich als <button> rendert.
-              // Als Link gerendert muss das ausdrücklich abgewählt werden.
-              nativeButton={false}
-              render={<Link href={item.href} />}
-            >
-              <item.icon className="size-3.5" />
-              {item.label}
-            </Button>
-          ))}
-        </nav>
+        <DashboardNav />
 
         <div className="ml-auto flex items-center gap-4">
           <CreditMeter

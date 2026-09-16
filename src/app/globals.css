@@ -128,3 +128,62 @@
     @apply font-sans;
   }
 }
+/* ===========================================================================
+   Bewegung und Tiefe
+   ---------------------------------------------------------------------------
+   Keine Farbdefinitionen. Die Palette oben bleibt unverändert; Hierarchie
+   entsteht hier ausschließlich über Zeit, Schichtung und Rhythmus.
+   =========================================================================== */
+
+@theme inline {
+  /* Eine Dauer und eine Kurve für die gesamte Oberfläche. Uneinheitliches
+     Timing ist der Hauptgrund, warum Interfaces „billig" wirken. */
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer utilities {
+  /* Der Standard-Übergang interaktiver Elemente. Bewusst auf die Eigenschaften
+     beschränkt, die sich tatsächlich ändern — `transition-all` animiert auch
+     Layout-Eigenschaften und ruckelt dadurch. */
+  .transition-ui {
+    transition-property: color, background-color, border-color, box-shadow,
+      transform, opacity;
+    transition-duration: 150ms;
+    transition-timing-function: var(--ease-out-quint);
+  }
+
+  /* Vertiefte Fläche: Das Videobild sitzt IN der Oberfläche, nicht darauf.
+     Im Dunkeln tragen Schatten nicht, deshalb übernimmt hier eine Innenkante. */
+  .well {
+    box-shadow: inset 0 1px 2px oklch(0 0 0 / 0.28);
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Gestaffeltes Einblenden, rein über CSS — eine Bibliothek wäre für sechs
+   Zeilen unverhältnismäßig, und JS-gesteuerte Startzustände erzeugen
+   Hydration-Abweichungen. */
+.rise-in {
+  animation: rise-in 420ms var(--ease-out-quint) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

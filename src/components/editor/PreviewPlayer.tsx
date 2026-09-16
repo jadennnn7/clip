@@ -119,8 +119,24 @@ export function PreviewPlayer({ clip, videoSrc, sourceWidth, sourceHeight }: Pre
   }, [playheadSeconds, durationInFrames])
 
   return (
-    <div className="flex h-full w-full items-center justify-center bg-neutral-950 p-4">
-      <div className="relative h-full max-h-full" style={{ aspectRatio: '9 / 16' }}>
+    <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-neutral-950 p-5">
+      <div className="group relative h-full max-h-full" style={{ aspectRatio: '9 / 16' }}>
+        {/* Feiner Ring plus weicher Schatten: Ohne die Kante wirkt das
+            Videobild wie ein Loch in der Fläche statt wie eine Ebene darauf. */}
+        <div className="pointer-events-none absolute -inset-px z-10 rounded-[13px] shadow-[0_0_0_1px_oklch(1_0_0/0.16),0_24px_56px_-16px_oklch(0_0_0/0.85)]" />
+
+        {/* Kennzeichnung des vorgeschauten Clips.
+            Liegt im Rahmen statt daneben: Die freie Fläche links und rechts
+            hängt von der Panelhöhe ab, ein Label dort überlappt früher oder
+            später das Bild. Sichtbar nur beim Überfahren, damit die Vorschau
+            im Ruhezustand unverstellt bleibt. */}
+        <div className="transition-ui pointer-events-none absolute inset-x-0 bottom-0 z-20 flex items-center gap-2 rounded-b-xl bg-gradient-to-t from-black/85 to-transparent px-3 pt-8 pb-3 opacity-0 group-hover:opacity-100">
+          <span className="rounded bg-white/15 px-1.5 py-0.5 text-xs font-semibold text-white tabular-nums">
+            {clip.virality_score}
+          </span>
+          <span className="truncate text-xs text-white/80">{clip.title}</span>
+        </div>
+
         <Player
           ref={playerRef}
           component={ClipComposition}

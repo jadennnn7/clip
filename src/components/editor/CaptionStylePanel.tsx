@@ -42,9 +42,9 @@ const COLOR_SWATCHES = [
 export function CaptionStylePanel({ style, onChange, onApplyPreset }: CaptionStylePanelProps) {
   return (
     <ScrollArea className="h-full">
-      <div className="flex flex-col gap-5 p-3">
+      <div className="flex flex-col gap-6 p-4">
         {/* --- Presets --- */}
-        <section className="flex flex-col gap-2">
+        <section className="flex flex-col gap-2.5">
           <Label className="text-xs text-muted-foreground">Vorlage</Label>
           <div className="grid grid-cols-2 gap-2">
             {(Object.keys(CAPTION_PRESETS) as Array<CaptionStyle['preset']>).map((preset) => (
@@ -53,13 +53,15 @@ export function CaptionStylePanel({ style, onChange, onApplyPreset }: CaptionSty
                 type="button"
                 onClick={() => onApplyPreset(preset)}
                 className={cn(
-                  'rounded-md border px-2 py-3 transition-colors',
+                  'transition-ui rounded-lg border px-2 py-3.5',
                   'hover:bg-accent focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',
-                  style.preset === preset ? 'border-primary bg-accent' : 'border-border',
+                  style.preset === preset
+                    ? 'border-primary/60 bg-accent shadow-xs'
+                    : 'border-border hover:border-border',
                 )}
               >
                 <span
-                  className="block truncate text-center text-xs font-black"
+                  className="block truncate text-center text-sm font-black"
                   style={{
                     color: CAPTION_PRESETS[preset].highlightColor,
                     WebkitTextStroke: `1px ${CAPTION_PRESETS[preset].strokeColor}`,
@@ -77,7 +79,7 @@ export function CaptionStylePanel({ style, onChange, onApplyPreset }: CaptionSty
         {/* --- Farben --- */}
         <section className="flex flex-col gap-2">
           <Label className="text-xs text-muted-foreground">Hervorhebung (aktives Wort)</Label>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {COLOR_SWATCHES.map((color) => (
               <button
                 key={color}
@@ -85,10 +87,10 @@ export function CaptionStylePanel({ style, onChange, onApplyPreset }: CaptionSty
                 aria-label={`Hervorhebungsfarbe ${color}`}
                 onClick={() => onChange({ highlightColor: color })}
                 className={cn(
-                  'size-7 rounded-md border-2 transition-transform hover:scale-110',
+                  'transition-ui size-7 rounded-full ring-2 ring-offset-2 ring-offset-background hover:scale-110',
                   style.highlightColor.toUpperCase() === color
-                    ? 'border-primary scale-110'
-                    : 'border-transparent',
+                    ? 'ring-primary scale-110'
+                    : 'ring-transparent',
                 )}
                 style={{ backgroundColor: color }}
               />
@@ -98,7 +100,7 @@ export function CaptionStylePanel({ style, onChange, onApplyPreset }: CaptionSty
 
         <section className="flex flex-col gap-2">
           <Label className="text-xs text-muted-foreground">Textfarbe</Label>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {COLOR_SWATCHES.map((color) => (
               <button
                 key={color}
@@ -106,8 +108,8 @@ export function CaptionStylePanel({ style, onChange, onApplyPreset }: CaptionSty
                 aria-label={`Textfarbe ${color}`}
                 onClick={() => onChange({ color })}
                 className={cn(
-                  'size-7 rounded-md border-2 transition-transform hover:scale-110',
-                  style.color.toUpperCase() === color ? 'border-primary scale-110' : 'border-transparent',
+                  'transition-ui size-7 rounded-full ring-2 ring-offset-2 ring-offset-background hover:scale-110',
+                  style.color.toUpperCase() === color ? 'ring-primary scale-110' : 'ring-transparent',
                 )}
                 style={{ backgroundColor: color }}
               />
@@ -216,7 +218,7 @@ function SliderRow({
     <section className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <Label className="text-xs text-muted-foreground">{label}</Label>
-        <span className="font-mono text-xs tabular-nums">
+        <span className="font-mono text-xs font-medium tabular-nums">
           {value}
           {unit}
         </span>

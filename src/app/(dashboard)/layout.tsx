@@ -53,6 +53,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* 1 Token ≈ 1 Render-Minute */}
           <TopUpDialog
             tokensLeft={Math.max(0, profile.render_minutes_limit - profile.render_minutes_used)}
+            tokensLimit={profile.render_minutes_limit}
           />
 
           <ThemeToggle />

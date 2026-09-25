@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Clapperboard } from 'lucide-react'
 import { CreditMeter } from '@/components/dashboard/CreditMeter'
 import { DashboardNav } from '@/components/dashboard/DashboardNav'
+import { TopUpDialog } from '@/components/dashboard/TopUpDialog'
 import { mockUsage } from '@/lib/mock-data'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
@@ -47,6 +48,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <CreditMeter
             used={profile.render_minutes_used}
             limit={profile.render_minutes_limit}
+          />
+
+          {/* 1 Token ≈ 1 Render-Minute */}
+          <TopUpDialog
+            tokensLeft={Math.max(0, profile.render_minutes_limit - profile.render_minutes_used)}
           />
 
           <ThemeToggle />

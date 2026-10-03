@@ -14,7 +14,7 @@ project.ingest      Quelle holen → ffprobe → Audio 16 kHz → Proxy 720p
       ↓
 project.transcribe  Deepgram Nova-3 (Wort-Timestamps + Diarization)
       ↓
-project.analyze     Claude Opus 5 → 3–5 Segmente mit Score und Metadaten
+project.analyze     Gemini 3.8 Flash → 3–5 Segmente mit Score und Metadaten
       ↓
 clip.reframe        (fan-out) Szenenerkennung + Active-Speaker → Crop-Keyframes
       ↓

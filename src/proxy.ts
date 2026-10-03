@@ -12,9 +12,10 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Alles außer statischen Assets. Bilder und Fonts brauchen keinen
-     * Session-Refresh und würden den Proxy nur unnötig aufrufen.
+     * Alles außer statischen Assets. Bilder, Videos, Fonts, robots.txt und
+     * sitemap.xml brauchen keinen Session-Refresh — und müssen ohne Konto
+     * erreichbar sein (das Demo-Video der Landingpage, Suchmaschinen).
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff2?|mp4|webm|mp3|txt|xml)$).*)',
   ],
 }

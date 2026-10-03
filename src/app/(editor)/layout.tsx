@@ -1,4 +1,7 @@
 import React from 'react'
+import { DarkDocument } from '@/components/editor/DarkDocument'
+import { WorkspaceOwner } from '@/components/workspace/WorkspaceProvider'
+import { getAccount } from '@/lib/account'
 
 /**
  * Eigenes Layout für den Editor.
@@ -18,8 +21,13 @@ import React from 'react'
  * Die Route-Gruppe ändert die URL nicht: `/dashboard/projects/[id]` bleibt
  * unverändert.
  */
-export default function EditorLayout({ children }: { children: React.ReactNode }) {
+export default async function EditorLayout({ children }: { children: React.ReactNode }) {
+  const account = await getAccount()
   return (
-    <div className="dark h-dvh overflow-hidden bg-background text-foreground">{children}</div>
+    <div className="dark h-dvh overflow-hidden bg-background text-foreground">
+      <WorkspaceOwner userId={account?.id ?? null} />
+      <DarkDocument />
+      {children}
+    </div>
   )
 }

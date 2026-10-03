@@ -7,11 +7,18 @@ function Progress({
   className,
   children,
   value,
+  // Base UI formatiert `aria-valuetext` mit `Intl.NumberFormat` und nimmt
+  // dafür standardmäßig die Laufzeit-Locale. Server und Browser haben die
+  // selten dieselbe — der Server schrieb "32 %", der Browser erwartete "32%",
+  // was bei jedem Render einen Hydration-Mismatch auslöste. Eine feste Locale
+  // lässt beide Seiten dasselbe erzeugen.
+  locale = "de-DE",
   ...props
 }: ProgressPrimitive.Root.Props) {
   return (
     <ProgressPrimitive.Root
       value={value}
+      locale={locale}
       data-slot="progress"
       className={cn("flex flex-wrap gap-3", className)}
       {...props}

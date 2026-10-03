@@ -1,85 +1,38 @@
 import React from 'react'
-import Link from 'next/link'
-import { Clapperboard } from 'lucide-react'
-import { CreditMeter } from '@/components/dashboard/CreditMeter'
-import { DashboardNav } from '@/components/dashboard/DashboardNav'
-import { mockUsage } from '@/lib/mock-data'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { ThemeToggle } from '@/components/theme-toggle'
+import { AppSidebar } from '@/components/dashboard/AppSidebar'
+import { TopBar } from '@/components/dashboard/TopBar'
+import { SupportWidget } from '@/components/support/SupportWidget'
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
+import { WorkspaceOwner } from '@/components/workspace/WorkspaceProvider'
+import { getAccount } from '@/lib/account'
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  // Phase 2: Profil kommt aus Supabase (`createClient()` → profiles).
-  // Die Guthabenwerte stammen aus derselben Quelle wie die Kennzahlen im
-  // Dashboard — zwei Stellen, die dasselbe anzeigen sollen, laufen sonst
-  // auseinander.
-  const profile = {
-    full_name: 'Jaden Tomic',
-    email: 'tomicjaden@gmail.com',
-    render_minutes_used: mockUsage.renderMinutesUsed,
-    render_minutes_limit: mockUsage.renderMinutesLimit,
-  }
-
-  const initials = profile.full_name
-    .split(' ')
-    .map((part) => part[0])
-    .slice(0, 2)
-    .join('')
-
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const account = await getAccount()
   return (
-    <div className="flex h-dvh flex-col overflow-hidden">
-      <header className="flex h-14 shrink-0 items-center gap-4 border-b px-4">
-        <Link href="/dashboard" className="flex shrink-0 items-center gap-2">
-          <Clapperboard className="size-5" />
-          <span className="text-sm font-semibold tracking-tight">OmegaClip</span>
-        </Link>
+    <SidebarProvider>
+      <WorkspaceOwner userId={account?.id ?? null} />
+      {/* Schwebendes Layout: Unten liegt nur Licht (`ambient`), darauf die
+          Glasflächen — Sidebar und Kopfleiste. Der Inhalt ist keine eigene
+          Fläche mehr, er liegt direkt auf dem Grund und scrollt unter der
+          Kopfleiste durch. Erst dadurch hat das Glas etwas, das es bricht. */}
+      <div
+        className="ambient flex h-dvh overflow-hidden"
+        style={{ '--app-top': '4.25rem' } as React.CSSProperties}
+      >
+        <AppSidebar account={account} />
 
-        <DashboardNav />
+        <SidebarInset className="relative flex min-h-0 flex-col">
+          {/* Die Meldungen leitet die Kopfleiste selbst aus dem Workspace ab. */}
+          <TopBar />
 
-        <div className="ml-auto flex items-center gap-4">
-          <CreditMeter
-            used={profile.render_minutes_used}
-            limit={profile.render_minutes_limit}
-          />
+          <main data-slot="app-main" className="min-h-0 flex-1 overflow-hidden">
+            {children}
+          </main>
+        </SidebarInset>
+      </div>
+      {/* Auf jeder Seite der App dieselbe Hilfe — ein Gespräch, das beim Seitenwechsel weiterläuft. */}
+      <SupportWidget firstName={account?.fullName?.split(/\s+/)[0]} />
 
-          <ThemeToggle />
-
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              className="focus-visible:ring-ring rounded-full focus-visible:ring-2 focus-visible:outline-none"
-              aria-label="Nutzermenü"
-            >
-              <Avatar className="size-8">
-                <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-              </Avatar>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel className="font-normal">
-                <p className="text-sm font-medium">{profile.full_name}</p>
-                <p className="text-xs text-muted-foreground">{profile.email}</p>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem render={<Link href="/dashboard/billing" />}>
-                Abo verwalten
-              </DropdownMenuItem>
-              <DropdownMenuItem render={<Link href="/dashboard/connections" />}>
-                Verbundene Kanäle
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Abmelden</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </header>
-
-      <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
-    </div>
+    </SidebarProvider>
   )
 }

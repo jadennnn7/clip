@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { createReadStream } from 'node:fs'
 import { DeepgramClient } from '@deepgram/sdk'
 import type { TranscriptWord } from '@/types/database'
 
@@ -55,6 +56,42 @@ export async function transcribeFromUrl(
     smart_format: true,
   })
 
+  return parseResponse(response, language)
+}
+
+/**
+ * Transkribiert eine lokale Audiodatei.
+ *
+ * Der Weg für die lokale Pipeline: Ohne R2 gibt es keine URL, die Deepgram
+ * selbst abrufen könnte, also geht die Datei im Request mit. Ohne Sprache
+ * erkennt Deepgram sie selbst.
+ */
+export async function transcribeFile(
+  audioPath: string,
+  language: string | null,
+  signal?: AbortSignal,
+): Promise<TranscriptionResult> {
+  const response = await getClient().listen.v1.media.transcribeFile(
+    createReadStream(audioPath),
+    {
+      model: MODEL,
+      ...(language ? { language } : { detect_language: true }),
+      punctuate: true,
+      diarize: true,
+      utterances: true,
+      smart_format: true,
+    },
+    // Eine Stunde Audio braucht bei Deepgram rund eine Minute. Der Default
+    // von 60 s wäre zu knapp.
+    { timeoutInSeconds: 600, abortSignal: signal },
+  )
+  return parseResponse(response, language ?? 'auto')
+}
+
+function parseResponse(
+  response: Awaited<ReturnType<DeepgramClient['listen']['v1']['media']['transcribeUrl']>>,
+  requestedLanguage: string,
+): TranscriptionResult {
   // Die Antwort ist eine Union: Ohne `callback` kommt das Transkript direkt,
   // mit `callback` nur eine request_id. Hier wird synchron gearbeitet, also
   // ist die zweite Variante ein Konfigurationsfehler und kein Sonderfall.
@@ -86,7 +123,7 @@ export async function transcribeFromUrl(
   return {
     words,
     fullText: alternative.transcript ?? '',
-    language,
+    language: response.results?.channels?.[0]?.detected_language ?? requestedLanguage,
     // Satzgrenzen als Sekundenwerte — die Clip-Grenzen werden darauf gerastet,
     // damit kein Clip mitten im Satz beginnt oder endet.
     utteranceBoundaries: utterances

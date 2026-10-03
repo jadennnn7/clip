@@ -14,10 +14,10 @@ export interface SocialProvider {
   readonly platform: SocialPlatform
 
   /** URL, auf die der Nutzer zum Autorisieren geschickt wird. */
-  getAuthUrl(params: { state: string; redirectUri: string }): string
+  getAuthUrl(params: { state: string; redirectUri: string; codeChallenge?: string }): string
 
   /** Tauscht den Authorization Code gegen Tokens. */
-  exchangeCode(params: { code: string; redirectUri: string }): Promise<TokenSet>
+  exchangeCode(params: { code: string; redirectUri: string; codeVerifier?: string }): Promise<TokenSet>
 
   /** Erneuert einen abgelaufenen Access Token. */
   refreshToken(refreshToken: string): Promise<TokenSet>
@@ -36,6 +36,38 @@ export interface SocialProvider {
 
   /** Veröffentlicht einen Clip. */
   publish(params: PublishParams): Promise<PublishResult>
+
+  /** Kennzahlen des Kanals für Analytics. */
+  getChannelStats(account: ProviderAccount): Promise<ChannelStats>
+
+  /**
+   * Kennzahlen veröffentlichter Beiträge, nach Plattform-Post-ID. Fehlt eine
+   * ID in der Antwort, ist der Beitrag nicht (mehr) abrufbar — gelöscht oder
+   * für dieses Konto unsichtbar.
+   */
+  getPostStats(account: ProviderAccount, postIds: string[]): Promise<Map<string, PostStats>>
+}
+
+/**
+ * `null` heißt immer „liefert die Plattform mit den erteilten Berechtigungen
+ * nicht" — nie 0. Eine Null würde im Dashboard als echter Messwert gelesen.
+ */
+export interface ChannelStats {
+  followers: number | null
+  totalViews: number | null
+  mediaCount: number | null
+  /** Warum Werte fehlen, in Nutzersprache. */
+  notice?: string
+}
+
+export interface PostStats {
+  views: number | null
+  likes: number | null
+  comments: number | null
+  publishedAt?: string
+  url?: string | null
+  thumbnailUrl?: string | null
+  notice?: string
 }
 
 export interface TokenSet {
@@ -61,6 +93,8 @@ export interface PublishingLimit {
   used: number
   quota: number
   get remaining(): number
+  /** false: Die Plattform stellt keinen lesbaren Kontingentstand bereit. */
+  isKnown?: boolean
 }
 
 export interface ProviderAccount {
@@ -81,6 +115,10 @@ export interface PublishParams {
    * Plattform weitergereicht, wo sie Idempotenz unterstützt.
    */
   idempotencyKey: string
+  /** Persistenter Fortschritt dieses einen Jobs. Enthält geheime Upload-URLs. */
+  checkpoint?: Record<string, string>
+  /** Muss vor dem Upload verfügbar sein; serverseitig und atomar speichern. */
+  saveCheckpoint?: (checkpoint: Record<string, string>) => Promise<void>
 }
 
 export interface PublishResult {
@@ -116,6 +154,8 @@ export type PublishErrorKind =
   | 'quota'
   /** 400 — Video zu lang, Format falsch, Titel zu lang. Endgültig. */
   | 'terminal'
+  /** Remote-Ergebnis unklar: niemals automatisch einen neuen Post anlegen. */
+  | 'uncertain'
 
 export class PublishError extends Error {
   constructor(
@@ -128,10 +168,20 @@ export class PublishError extends Error {
   }
 }
 
+/** Warum eine Kanalverbindung scheitert — die Verbindungsseite erklärt jeden Grund eigens. */
+export type ConnectFailure = 'missing_permissions' | 'no_page_shared' | 'no_linked_page' | 'multiple_pages'
+
+export class ConnectError extends PublishError {
+  constructor(message: string, readonly reason: ConnectFailure) {
+    super(message, 'auth')
+    this.name = 'ConnectError'
+  }
+}
+
 /** Ordnet einen HTTP-Status einer Fehlerklasse zu. */
 export function classifyHttpStatus(status: number): PublishErrorKind {
   if (status === 401 || status === 403) return 'auth'
-  if (status === 429) return 'quota'
+  if (status === 429) return 'retryable'
   if (status >= 500) return 'retryable'
   return 'terminal'
 }

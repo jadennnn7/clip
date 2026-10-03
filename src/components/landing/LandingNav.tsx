@@ -1,68 +1,136 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
-import { Clapperboard } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { ThemeToggle } from '@/components/theme-toggle'
-import { cn } from '@/lib/utils'
+import { ArrowRight } from 'lucide-react'
+import { BrandMark } from '@/components/landing/BrandMark'
+import { AnimatedNav } from '@/components/ui/animated-nav'
+import { ChapterScrubber } from '@/components/landing/ChapterScrubber'
+import { createClient } from '@/lib/supabase/client'
 
-const ANCHORS = [
-  { href: '#beweis', label: 'Beispiel' },
-  { href: '#unterschied', label: 'Unterschied' },
-  { href: '#funktionen', label: 'Funktionen' },
-  { href: '#preise', label: 'Preise' },
-] as const
+/** Ab dieser Scroll-Distanz gilt die Navbar als „vom Hero gelöst". */
+const THRESHOLD = 24
+
+function subscribe(onChange: () => void) {
+  window.addEventListener('scroll', onChange, { passive: true })
+  return () => window.removeEventListener('scroll', onChange)
+}
 
 /**
- * Kopfzeile der Landing-Page.
- *
- * Bleibt beim Scrollen stehen, tritt aber erst dann optisch hervor: Ganz oben
- * ist sie transparent und stört den Hero nicht, sobald gescrollt wird bekommt
- * sie Grund und Kante, damit der Text darunter nicht durchscheint.
+ * Bewusst ein Boolean statt der Scroll-Position: `useSyncExternalStore`
+ * rendert bei jeder Änderung des Snapshots neu — mit einer Pixelzahl wäre
+ * das jedes einzelne Scroll-Event, mit dem Schwellwert genau zweimal.
  */
-export function LandingNav() {
-  const [scrolled, setScrolled] = useState(false)
+function getSnapshot() {
+  return window.scrollY > THRESHOLD
+}
 
+function getServerSnapshot() {
+  return false
+}
+
+/**
+ * Ob jemand angemeldet ist. Gelesen wird im Browser aus dem Session-Cookie,
+ * ohne Anfrage an Supabase — so bleibt die Landing-Page statisch, und die
+ * Navbar zeigt Angemeldeten gleich nach dem Laden den Weg ins Dashboard.
+ */
+function useSignedIn() {
+  const [signedIn, setSignedIn] = useState(false)
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8)
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
+    // Ohne Supabase (Entwicklung auf Mock-Daten) gibt es keine Session.
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return
+    // Meldet beim Abonnieren sofort den aktuellen Stand, danach jede An- und Abmeldung.
+    const { data } = createClient().auth.onAuthStateChange((_event, session) => setSignedIn(session !== null))
+    return () => data.subscription.unsubscribe()
   }, [])
+  return signedIn
+}
+
+// Ab 60rem mehr Luft zwischen den Links; darunter muss „Zum Dashboard" noch
+// neben die Pille passen.
+const LINK_CLASSES =
+  'rounded-full px-3 py-2 text-[0.8rem] text-white/70 outline-none transition-ui hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white/50 min-[60rem]:px-4'
+
+/**
+ * Hero-Navbar: eine schwebende Glas-Pille, die beim Scrollen unverändert
+ * stehen bleibt — Marke, Kapitel-Links, Anmelden und Loslegen. Angemeldete
+ * sehen statt der beiden „Zum Dashboard" rechts außen, außerhalb der Pille.
+ */
+export function LandingNav({
+  links,
+}: {
+  /** In Seitenreihenfolge — wer die Leiste liest, liest das Inhaltsverzeichnis. */
+  links: ReadonlyArray<{ href: string; label: string }>
+}) {
+  const scrolled = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot,
+  )
+  const signedIn = useSignedIn()
 
   return (
-    <header
-      className={cn(
-        'transition-ui sticky top-0 z-50',
-        scrolled ? 'border-b bg-background/80 backdrop-blur-md' : 'border-b border-transparent',
-      )}
-    >
-      <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-6 px-4 sm:px-6">
-        <Link href="/" className="flex shrink-0 items-center gap-2">
-          <Clapperboard className="size-5" />
-          <span className="text-sm font-semibold tracking-tight">OmegaClip</span>
-        </Link>
+    <header className="pointer-events-none fixed inset-x-0 top-0 z-50 text-white">
+      {/* Drei Spalten: Die Pille bleibt mittig, solange rechts Platz ist, und
+          weicht erst nach links, wenn „Zum Dashboard" sonst in sie liefe. */}
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 pt-4">
+        <AnimatedNav className="glass pointer-events-auto col-start-2 h-13 max-w-full px-2 py-1.5">
+          <Link
+            href="/"
+            className="flex shrink-0 rounded-full py-1 pr-4 pl-2 outline-none focus-visible:ring-2 focus-visible:ring-white/50 min-[60rem]:pr-6"
+          >
+            <BrandMark eager />
+          </Link>
 
-        <nav className="hidden items-center gap-1 md:flex">
-          {ANCHORS.map((anchor) => (
-            <a
-              key={anchor.href}
-              href={anchor.href}
-              className="transition-ui rounded-lg px-2.5 py-1.5 text-sm text-muted-foreground hover:bg-accent/60 hover:text-foreground"
-            >
-              {anchor.label}
-            </a>
-          ))}
-        </nav>
+          <div className="hidden items-center gap-1 pr-3 md:flex min-[60rem]:gap-1.5">
+            {links.map((link) => (
+              <Link key={link.href} href={link.href} className={LINK_CLASSES}>
+                {link.label}
+              </Link>
+            ))}
+          </div>
 
-        <div className="ml-auto flex items-center gap-1">
-          <ThemeToggle />
-          <Button size="sm" nativeButton={false} render={<Link href="/dashboard" />}>
+          {!signedIn && (
+            <>
+              <Link href="/dashboard" className={`${LINK_CLASSES} mr-1 hidden sm:block`}>
+                Anmelden
+              </Link>
+
+              {/* Derselbe blaue Tropfen wie „Gratis starten" im Hero. */}
+              <Link
+                href="/dashboard"
+                className="liquid liquid-brand group flex h-9 shrink-0 items-center gap-1.5 rounded-full pr-3.5 pl-4 text-[0.8125rem] font-semibold whitespace-nowrap outline-none transition-ui hover:brightness-[1.06] focus-visible:ring-2 focus-visible:ring-white/60"
+              >
+                Loslegen
+                <ArrowRight
+                  aria-hidden
+                  className="size-3.5 transition-transform duration-300 ease-(--ease-out-quint) group-hover:translate-x-0.5"
+                />
+              </Link>
+            </>
+          )}
+        </AnimatedNav>
+
+        {/* Nur Schrift und Pfeil; der Rahmen kommt erst beim Hovern. Erscheint, sobald
+            die Session gelesen ist — darum leise eingeblendet. */}
+        {signedIn && (
+          <Link
+            href="/dashboard"
+            className="group pointer-events-auto col-start-3 flex h-10 items-center gap-1.5 justify-self-end rounded-full border border-transparent pr-3.5 pl-4 text-[0.8125rem] font-semibold whitespace-nowrap text-white outline-none transition-ui animate-in fade-in hover:border-white/35 focus-visible:ring-2 focus-visible:ring-white/50"
+          >
             Zum Dashboard
-          </Button>
-        </div>
+            <ArrowRight
+              aria-hidden
+              className="size-3.5 transition-transform duration-300 ease-(--ease-out-quint) group-hover:translate-x-0.5"
+            />
+          </Link>
+        )}
       </div>
+
+      {/* Lesefortschritt als Video-Timeline an der Oberkante des Fensters:
+          Die Seite ist das lange Video aus dem Hero, ihre Abschnitte sind
+          die Kapitel. Nach der Pille im DOM, damit die Zeitanzeige über ihr liegt. */}
+      <ChapterScrubber visible={scrolled} />
     </header>
   )
 }

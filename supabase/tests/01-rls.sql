@@ -74,7 +74,7 @@ reset role;
 select '11) Reservierung innerhalb des Limits: ' ||
   public.reserve_render_minutes('11111111-1111-1111-1111-111111111111', 8)::text || ' (erwartet true)';
 select '12) Reservierung über dem Limit: ' ||
-  public.reserve_render_minutes('11111111-1111-1111-1111-111111111111', 5)::text || ' (erwartet false, Limit 10)';
+  public.reserve_render_minutes('11111111-1111-1111-1111-111111111111', 5)::text || ' (erwartet false, Limit 8)';
 select '13) Verbrauch jetzt: ' || render_minutes_used::text || ' (erwartet 8.00)'
   from public.profiles where id = '11111111-1111-1111-1111-111111111111';
 

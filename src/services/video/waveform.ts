@@ -2,6 +2,7 @@ import 'server-only'
 
 import { spawn } from 'node:child_process'
 import type { WaveformData } from '@/types/editor'
+import { FFMPEG } from '@/services/pipeline/process'
 
 /**
  * Berechnet die Wellenform-Peaks EINMAL beim Ingest.
@@ -43,7 +44,7 @@ export async function computeWaveform(
 function decodePcm(audioPath: string): Promise<Int16Array> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = []
-    const ffmpeg = spawn('ffmpeg', [
+    const ffmpeg = spawn(FFMPEG, [
       '-i', audioPath,
       '-ac', '1',
       '-ar', '8000',

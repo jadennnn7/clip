@@ -1,266 +1,150 @@
-import React from 'react'
+'use client'
+
+import { useState } from 'react'
 import Link from 'next/link'
-import { Film, HardDrive, Upload, CircleAlert, Clapperboard, Scissors, Timer, Send } from 'lucide-react'
-import { StatusBadge } from '@/components/dashboard/StatusBadge'
-import { IngestDialog } from '@/components/dashboard/IngestDialog'
-import { PageHeader } from '@/components/dashboard/PageHeader'
-import { StatTile, type StatSeverity } from '@/components/dashboard/StatTile'
-import { PlatformIcon } from '@/components/social/PlatformIcon'
-import { Button } from '@/components/ui/button'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { mockClipCounts, mockClips, mockProjects, mockQueue, mockUsage } from '@/lib/mock-data'
-import type { ProjectSource } from '@/types/database'
-
-function SourceIcon({ source, className }: { source: ProjectSource; className?: string }) {
-  if (source === 'youtube') return <PlatformIcon platform="youtube" className={className} />
-  if (source === 'drive') return <HardDrive className={className} />
-  return <Upload className={className} />
-}
-
-export default function DashboardPage() {
-  // Phase 2:
-  //   const supabase = await createClient()
-  //   const { data: projects } = await supabase.from('projects').select('*, clips(count)')
-  // RLS filtert dabei automatisch auf den eingeloggten Nutzer — kein
-  // .eq('user_id', ...) nötig und keine Möglichkeit, es zu vergessen.
-  const projects = mockProjects
-
-  return (
-    <ScrollArea className="h-full">
-      <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6">
-        <PageHeader
-          title="Projekte"
-          description="Lade ein Langform-Video hoch — OmegaClip findet die stärksten Momente, schneidet sie auf 9:16 und plant sie ein."
-          action={<IngestDialog />}
-        />
-
-        <StatRow />
-
-        {projects.length === 0 ? <EmptyState /> : <ProjectTable />}
-      </div>
-    </ScrollArea>
-  )
-}
-
+import { ArrowRight, Clock, FolderOpen, Scissors } from 'lucide-react'
+import { ProcessingClipCard } from '@/components/clips/ProcessingClipCard'
+import { RecentClipCard } from '@/components/dashboard/RecentClipCard'
+import { QuickAccessNav } from '@/components/dashboard/QuickAccessNav'
+import { VideoLibrary } from '@/components/clips/VideoLibrary'
+import { ACTIVE_STATUSES, isLinkProject, mediaUrl } from '@/lib/link-import'
+import { IntakeBar } from '@/components/dashboard/IntakeBar'
+import { EditorLinkDialog } from '@/components/dashboard/EditorLinkDialog'
+import { ScrollRow } from '@/components/dashboard/ScrollRow'
+import { useWorkspaceStore } from '@/stores/workspace-store'
 /**
- * Kennzahlen-Reihe.
+ * Übersicht.
  *
- * Beantwortet die vier Fragen, mit denen Nutzer das Dashboard öffnen: Wie viel
- * läuft gerade? Was ist dabei herausgekommen? Wie viel Guthaben habe ich noch?
- * Was geht als Nächstes raus?
- *
- * Die Werte werden aus denselben Datenquellen abgeleitet, die auch die Tabelle
- * und der Kalender nutzen — fest eingetragene Zahlen laufen sonst auseinander,
- * sobald sich irgendwo etwas ändert.
+ * Drei Dinge, sonst nichts: ein neues Video anlegen, da weitermachen, wo man
+ * war, und die Projekte finden. Vorher standen dazwischen eine Statuszeile,
+ * eine Shader-Bühne und sieben Werkzeug-Kacheln — alles davon gibt es in
+ * Sidebar und Kopfleiste schon einmal. Der Platz, der dadurch frei wird, ist
+ * gewollt: Abstand ist hier das Gliederungsmittel, nicht Rahmen und Flächen.
  */
-function StatRow() {
-  const inProgress = mockProjects.filter(
-    (project) => !['ready', 'error', 'draft'].includes(project.status),
-  ).length
-  const failed = mockProjects.filter((project) => project.status === 'error').length
+export default function DashboardPage() {
+  const projects = useWorkspaceStore((state) => state.projects)
+  const clips = useWorkspaceStore((state) => state.clips)
+  const hydrated = useWorkspaceStore((state) => state.hydrated)
+  const outputFormats = useWorkspaceStore((state) => state.outputFormats)
+  const projectSettings = useWorkspaceStore((state) => state.projectSettings)
+  const [editorDialogOpen, setEditorDialogOpen] = useState(false)
+  // Fünf, weil fünf Karten genau in die Spalte passen — die sechste würde nur
+  // Blätterpfeile erzwingen.
+  const recentClips = [...clips].sort((a, b) => b.updated_at.localeCompare(a.updated_at)).slice(0, 5)
+  // Videos, die gerade geschnitten werden, stehen in der Reihe vorn.
+  const processing = projects.filter((project) => isLinkProject(project) && ACTIVE_STATUSES.includes(project.status))
+  const projectById = new Map(projects.map((project) => [project.id, project]))
 
-  const clipCount = mockClips.length
-  const averageScore = Math.round(
-    mockClips.reduce((sum, clip) => sum + clip.virality_score, 0) / (clipCount || 1),
-  )
+  const editorHref = recentClips[0]
+    ? `/dashboard/projects/${recentClips[0].project_id}?clip=${recentClips[0].id}`
+    : projects.find((p) => p.status === 'ready')
+      ? `/dashboard/projects/${projects.find((p) => p.status === 'ready')!.id}`
+      : projects[0]
+        ? `/dashboard/projects/${projects[0].id}`
+        : '/dashboard/editor'
 
-  const remaining = mockUsage.renderMinutesLimit - mockUsage.renderMinutesUsed
-  const usedRatio = mockUsage.renderMinutesUsed / mockUsage.renderMinutesLimit
+  return <div className="h-full overflow-y-auto">
+    <div className="relative mx-auto w-full max-w-5xl px-5 pt-10 pb-28 sm:px-10 sm:pt-20">
+      {/* Lichthof hinter dem Einstieg: Das hellste Glas der Seite sitzt über
+          der hellsten Stelle des Grunds — dort, wo jedes Projekt anfängt. */}
+      {/* Nur hinter dem Hero — nicht bis in die Projekte-Sektion durchscheinen,
+          sonst entsteht dort wieder der Bubbly-Lichtfleck. */}
+      {/* Blau wie der Schein über dem Hero der Landing-Page: Wer vom Login
+          kommt, landet im selben Licht. */}
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-40 h-[22rem] bg-[radial-gradient(ellipse_50%_55%_at_50%_40%,var(--brand-glow),transparent_72%)]" />
 
-  // Der Schweregrad hängt am Verbrauch, nicht an einer festen Zahl — und die
-  // Kontextzeile sagt dasselbe noch einmal in Worten, damit die Warnung nicht
-  // allein an der Farbe hängt.
-  const usageSeverity: StatSeverity =
-    usedRatio >= 0.9 ? 'critical' : usedRatio >= 0.7 ? 'warning' : 'neutral'
-  const usageContext =
-    usageSeverity === 'critical'
-      ? 'Fast aufgebraucht'
-      : usageSeverity === 'warning'
-        ? 'Guthaben wird knapp'
-        : `von ${mockUsage.renderMinutesLimit} Minuten`
+      <header className="relative mx-auto max-w-2xl text-center">
+        {/* Verlauf in der Schrift: Die Zeile liest sich wie unter Glas, oben
+            voll, unten leicht zurückgenommen. Die Pointe steht im Blau des
+            Logos — wie „Null Aufwand." auf der Landing-Page. Im Hellen der
+            tiefe Ton, der helle hätte auf Weiß keinen Kontrast. */}
+        <h1 className="rise-in-blur pb-1 font-display text-4xl font-semibold tracking-[-0.035em] text-balance sm:text-[3.4rem] sm:leading-[1.05]">
+          <span className="bg-gradient-to-b from-foreground to-foreground/60 bg-clip-text text-transparent">Was schneiden wir </span>
+          <span className="bg-gradient-to-b from-brand-deep to-primary bg-clip-text text-transparent dark:from-brand-light dark:via-brand dark:to-brand">heute?</span>
+        </h1>
+        
+        <div className="rise-in mt-6" style={{ animationDelay: '80ms' }}><IntakeBar /></div>
 
-  const scheduled = mockQueue.filter((entry) =>
-    ['pending', 'needs_review'].includes(entry.status),
-  ).length
-  const needsReview = mockQueue.filter((entry) => entry.status === 'needs_review').length
+        <QuickAccessNav onEditorOpen={() => setEditorDialogOpen(true)} />
+      </header>
 
-  return (
-    <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <StatTile
-        icon={Clapperboard}
-        label="Projekte"
-        value={mockProjects.length}
-        context={
-          inProgress > 0
-            ? `${inProgress} in Arbeit${failed > 0 ? `, ${failed} mit Fehler` : ''}`
-            : 'Alle verarbeitet'
-        }
-        delayMs={0}
-      />
-      <StatTile
-        icon={Scissors}
-        label="Clips erzeugt"
-        value={clipCount}
-        context={clipCount > 0 ? `Durchschnittlicher Score ${averageScore}` : 'Noch keine'}
-        delayMs={60}
-      />
-      <StatTile
-        icon={Timer}
-        label="Render-Minuten"
-        value={Math.round(remaining)}
-        unit="übrig"
-        meter={usedRatio}
-        severity={usageSeverity}
-        context={usageContext}
-        delayMs={120}
-      />
-      <StatTile
-        icon={Send}
-        label="Eingeplant"
-        value={scheduled}
-        context={needsReview > 0 ? `${needsReview} wartet auf Freigabe` : 'Alle freigegeben'}
-        delayMs={180}
-      />
+      {/* Zuletzt Bearbeitetes vor dem Projektraster: Weitermachen ist häufiger
+          als Stöbern, und das Raster mit Suche und Filtern ist Verwaltung. */}
+      {!hydrated ? (
+        <div aria-hidden className="relative mt-24 flex gap-5 overflow-hidden pt-12">
+          {Array.from({ length: 5 }, (_, index) => (
+            <div key={index} className="w-[156px] shrink-0">
+              <div className="aspect-[9/16] animate-pulse rounded-xl bg-foreground/[0.06]" />
+              <div className="mt-2.5 px-0.5">
+                <div className="h-3.5 w-4/5 animate-pulse rounded-full bg-foreground/[0.07]" />
+                <div className="mt-2 flex justify-between">
+                  <div className="h-5 w-8 animate-pulse rounded-full bg-foreground/[0.06]" />
+                  <div className="h-3 w-6 animate-pulse rounded-full bg-foreground/[0.05]" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : recentClips.length > 0 || processing.length > 0 ? (
+        <div className="relative mt-24">
+          <ScrollRow
+            icon={Clock}
+            title="Zuletzt bearbeitet"
+            action={
+              <div className="mr-1 flex items-center gap-2">
+                <Link
+                  href={editorHref}
+                  className="transition-ui inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+                >
+                  <Scissors className="size-3" />
+                  Editor öffnen
+                </Link>
+                <span className="text-muted-foreground/30">·</span>
+                <Link
+                  href="/dashboard/clips"
+                  className="transition-ui inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+                >
+                  Alle Clips
+                  <ArrowRight className="size-3" />
+                </Link>
+              </div>
+            }
+          >
+            {processing.map((project) => (
+              <Link
+                key={project.id}
+                href={`/dashboard/clips/${project.id}`}
+                className="outline-none focus-visible:ring-3 focus-visible:ring-ring/50 rounded-xl"
+              >
+                <ProcessingClipCard project={project} compact />
+              </Link>
+            ))}
+            {recentClips.map((clip) => (
+              <RecentClipCard
+                key={clip.id}
+                clip={clip}
+                href={`/dashboard/clips/${clip.project_id}?clip=${clip.id}`}
+                previewSrc={projectById.has(clip.project_id) ? mediaUrl(projectById.get(clip.project_id)!) : null}
+                sourceAspect={projectById.get(clip.project_id)?.width && projectById.get(clip.project_id)?.height
+                  ? projectById.get(clip.project_id)!.width! / projectById.get(clip.project_id)!.height!
+                  : undefined}
+                outputFormat={outputFormats[clip.id] ?? projectSettings[clip.project_id]?.aspectRatio ?? '9:16'}
+              />
+            ))}
+          </ScrollRow>
+        </div>
+      ) : null}
+
+      <section className="relative mt-16" aria-labelledby="projects-heading">
+        <div className="flex min-h-9 flex-wrap items-baseline gap-x-3 gap-y-1">
+          <h2 id="projects-heading" className="flex items-center gap-2 font-display text-lg font-semibold tracking-tight"><FolderOpen className="size-4 self-center text-primary" />Projekte</h2>
+        </div>
+        <div className="mt-6">
+          <VideoLibrary showStats={false} />
+        </div>
+      </section>
+
+      <EditorLinkDialog open={editorDialogOpen} onOpenChange={setEditorDialogOpen} />
     </div>
-  )
-}
-
-function ProjectTable() {
-  return (
-    <div className="overflow-hidden rounded-xl border bg-card shadow-xs">
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-muted/40 hover:bg-muted/40">
-            <TableHead className="h-10 text-xs font-medium">Projekt</TableHead>
-            {/* Auf Telefonen zählen Titel, Status und die Aktion. Länge und
-                Clip-Anzahl weichen, statt den Titel auf ein paar Zeichen zu
-                quetschen oder die Aktion hinter einen Scroll zu schieben. */}
-            <TableHead className="hidden h-10 w-28 text-xs font-medium sm:table-cell">
-              Länge
-            </TableHead>
-            <TableHead className="hidden h-10 w-20 text-right text-xs font-medium sm:table-cell">
-              Clips
-            </TableHead>
-            <TableHead className="h-10 w-40 text-xs font-medium">Status</TableHead>
-            <TableHead className="h-10 w-24 text-right text-xs font-medium">Aktion</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {mockProjects.map((project) => {
-            const clipCount = mockClipCounts[project.id] ?? 0
-            const isReady = project.status === 'ready'
-
-            return (
-              <TableRow key={project.id} className="transition-ui group h-[68px]">
-                {/* `w-full max-w-0`: In einer Tabelle mit automatischem Layout
-                    wächst die Spalte sonst bis zum längsten Titel und `truncate`
-                    greift nie. Mit einer Maximalbreite von 0 darf die Zelle
-                    unter ihre Inhaltsbreite schrumpfen und füllt zugleich den
-                    verbleibenden Platz. */}
-                <TableCell className="w-full max-w-0">
-                  <div className="flex items-center gap-3">
-                    {/* 16:9 statt Quadrat — die Kachel steht für ein Video und
-                        sollte auch so proportioniert sein. */}
-                    <div className="transition-ui flex aspect-video w-14 shrink-0 items-center justify-center rounded-md border bg-muted/60 group-hover:bg-muted">
-                      <SourceIcon
-                        source={project.source_type}
-                        className="size-4 text-muted-foreground"
-                      />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">{project.title}</p>
-                      {project.error_message ? (
-                        <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-destructive">
-                          <CircleAlert className="size-3 shrink-0" />
-                          {project.error_message}
-                        </p>
-                      ) : (
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          {new Date(project.created_at).toLocaleDateString('de-DE', {
-                            day: '2-digit',
-                            month: 'short',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </TableCell>
-
-                {/* Spalten aus Zahlen fluchten vertikal — hier gehören
-                    tabellarische Ziffern hin. */}
-                <TableCell className="hidden font-mono text-xs tabular-nums text-muted-foreground sm:table-cell">
-                  {formatDuration(project.duration_seconds)}
-                </TableCell>
-
-                <TableCell className="hidden text-right text-sm tabular-nums sm:table-cell">
-                  {clipCount > 0 ? clipCount : <span className="text-muted-foreground">—</span>}
-                </TableCell>
-
-                <TableCell>
-                  <StatusBadge status={project.status} />
-                </TableCell>
-
-                <TableCell className="text-right">
-                  {isReady ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      nativeButton={false}
-                      className="transition-ui group-hover:border-foreground/20 group-hover:bg-accent"
-                      render={<Link href={`/dashboard/projects/${project.id}`} />}
-                    >
-                      Öffnen
-                    </Button>
-                  ) : (
-                    <Button variant="ghost" size="sm" disabled>
-                      Öffnen
-                    </Button>
-                  )}
-                </TableCell>
-              </TableRow>
-            )
-          })}
-        </TableBody>
-      </Table>
-    </div>
-  )
-}
-
-function EmptyState() {
-  return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-20">
-      <div className="flex size-12 items-center justify-center rounded-full bg-muted">
-        <Film className="size-5 text-muted-foreground" />
-      </div>
-      <p className="text-base font-medium">Noch keine Projekte</p>
-      <p className="max-w-sm text-center text-sm text-pretty text-muted-foreground">
-        Lade ein Langform-Video hoch — OmegaClip findet die stärksten Momente und schneidet
-        sie auf 9:16.
-      </p>
-      <div className="mt-2">
-        <IngestDialog />
-      </div>
-    </div>
-  )
-}
-
-function formatDuration(seconds: number | null): string {
-  if (!seconds) return '—'
-  const hours = Math.floor(seconds / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  const secs = Math.floor(seconds % 60)
-  if (hours > 0) {
-    return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-  }
-  return `${minutes}:${secs.toString().padStart(2, '0')}`
+  </div>
 }

@@ -1,38 +1,51 @@
 'use client'
 
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useMemo, useRef } from 'react'
 import { Player, type PlayerRef } from '@remotion/player'
 import { ClipComposition } from '../../../remotion/ClipComposition'
+import { compositionDurationInFrames } from '../../../remotion/timing'
 import type { Clip } from '@/types/database'
-import {
-  COMPOSITION_HEIGHT,
-  COMPOSITION_WIDTH,
-  FPS,
-  type ClipCompositionProps,
-} from '@/types/editor'
+import { FPS, type ClipCompositionProps } from '@/types/editor'
 import { useEditorStore } from '@/stores/editor-store'
+import { usePreviewWatermark } from '@/stores/billing-usage-store'
+import type { OutputFormat } from '@/types/workspace'
+import { buildCompositionProps } from '@/lib/composition-props'
+
+export const OUTPUT_SIZE: Record<OutputFormat, [number, number]> = {
+  '9:16': [1080, 1920],
+  '1:1': [1080, 1080],
+  '16:9': [1920, 1080],
+}
 
 interface PreviewPlayerProps {
   clip: Clip
   videoSrc: string
   sourceWidth: number
   sourceHeight: number
+  outputFormat: OutputFormat
+  removedWords: number[]
+  /** Liegt deckungsgleich über dem Bild — für Auswahlrahmen und Hilfslinien. */
+  overlay?: React.ReactNode
+  /** Der Rahmen in Ausgabeproportionen, in dem Player und Overlay liegen. */
+  frameRef?: React.RefObject<HTMLDivElement | null>
 }
 
 /**
- * 9:16-Vorschau auf Basis des Remotion Players.
+ * Vorschau auf Basis des Remotion Players.
  *
  * Der Player rendert dieselbe `ClipComposition`, die später auf Lambda läuft.
- * Eine Änderung am Untertitel-Styling ist damit ein reiner Props-Wechsel: die
- * Vorschau aktualisiert sich im nächsten Frame, ohne Netzwerkaufruf und ohne
+ * Eine Änderung im Editor ist damit ein reiner Props-Wechsel: die Vorschau
+ * aktualisiert sich im nächsten Frame, ohne Netzwerkaufruf und ohne
  * Re-Rendering auf dem Server.
  */
-export function PreviewPlayer({ clip, videoSrc, sourceWidth, sourceHeight }: PreviewPlayerProps) {
+export function PreviewPlayer({ clip, videoSrc, sourceWidth, sourceHeight, outputFormat, removedWords, overlay, frameRef }: PreviewPlayerProps) {
   const playerRef = useRef<PlayerRef>(null)
 
   const isPlaying = useEditorStore((state) => state.isPlaying)
   const playbackRate = useEditorStore((state) => state.playbackRate)
   const playheadSeconds = useEditorStore((state) => state.playheadSeconds)
+  const loop = useEditorStore((state) => state.loop)
+  const previewMuted = useEditorStore((state) => state.previewMuted)
   const setPlayhead = useEditorStore((state) => state.setPlayhead)
   const setPlaying = useEditorStore((state) => state.setPlaying)
 
@@ -46,21 +59,29 @@ export function PreviewPlayer({ clip, videoSrc, sourceWidth, sourceHeight }: Pre
    */
   const lastReportedFrame = useRef(0)
 
-  const durationInFrames = Math.max(
-    1,
-    Math.round((clip.end_seconds - clip.start_seconds) * FPS),
-  )
+  const [compositionWidth, compositionHeight] = OUTPUT_SIZE[outputFormat]
 
-  const inputProps: ClipCompositionProps = {
-    videoSrc,
-    startSeconds: clip.start_seconds,
-    endSeconds: clip.end_seconds,
-    words: clip.words,
-    captionStyle: clip.caption_style,
-    cropKeyframes: clip.crop_keyframes,
-    sourceWidth,
-    sourceHeight,
-  }
+  /*
+    Stabil halten, nicht bei jedem Render neu bauen.
+
+    Die Abspielschleife des Players hängt an seiner Composition-Konfiguration,
+    und die enthält die Props. Ein neues Objekt startet die Schleife neu — und
+    dieser Player rendert während der Wiedergabe mit jedem Frame (er folgt dem
+    Playhead aus dem Store). Bei jedem Neustart ging der angefangene Frame
+    verloren: Die Zeitleiste lief nur mit rund zwei Dritteln der Echtzeit, das
+    Video lief ihr davon, und Remotion setzte es alle zwei Sekunden eine halbe
+    Sekunde zurück. Man sah den Clip stocken und Stücke doppelt.
+
+    Der Clip ändert seine Referenz nur bei echten Bearbeitungen, nie durch
+    den Playhead — er ist als Abhängigkeit also genau richtig.
+  */
+  const watermark = usePreviewWatermark()
+  const inputProps: ClipCompositionProps = useMemo(
+    // Ohne Abspann: Timeline und Playhead des Editors enden am Clip.
+    () => buildCompositionProps({ clip, removedWords, videoSrc, sourceWidth, sourceHeight, watermark, outro: false }),
+    [clip, removedWords, videoSrc, sourceWidth, sourceHeight, watermark],
+  )
+  const durationInFrames = compositionDurationInFrames(inputProps)
 
   // Player → Store
   useEffect(() => {
@@ -89,13 +110,32 @@ export function PreviewPlayer({ clip, videoSrc, sourceWidth, sourceHeight }: Pre
     }
   }, [setPlayhead, setPlaying])
 
+  /*
+    Die beiden Effekte unten lesen den Store beim Ausführen, nicht die Werte
+    aus dem Render, der sie ausgelöst hat.
+
+    Der Player meldet seine Ereignisse (`frameupdate`, `play`, `pause`) aus
+    seinen eigenen Effekten, und die laufen VOR den Effekten dieser
+    Komponente. Im selben Durchgang hat der Player-Callback den Store dann
+    schon weitergeschrieben, während die Closure hier noch den Wert des
+    vorigen Renders trägt. Der Vergleich gegen `lastReportedFrame` setzt zwei
+    verschiedene Zeitpunkte gleich: „Playhead 2,8 s, Player steht auf 0,8 s"
+    sieht wie ein Sprung von außen aus, der Effekt sucht zurück — der Player
+    meldet den Frame, der Store springt, der nächste Effekt sucht wieder. So
+    ging es ohne Ende, bis React nach 50 verschachtelten Updates abbrach
+    („Maximum update depth exceeded"). Ausgelöst wurde es, wenn ein Editor
+    mit noch veraltetem Store geöffnet wurde und `initialize` den Playhead
+    mitten in eine laufende Suche setzte.
+  */
+
   // Store → Player: Abspielzustand
   useEffect(() => {
     const player = playerRef.current
     if (!player) return
 
-    if (isPlaying && !player.isPlaying()) player.play()
-    else if (!isPlaying && player.isPlaying()) player.pause()
+    const shouldPlay = useEditorStore.getState().isPlaying
+    if (shouldPlay && !player.isPlaying()) player.play()
+    else if (!shouldPlay && player.isPlaying()) player.pause()
   }, [isPlaying])
 
   // Store → Player: Suchen, aber nur bei Änderungen von außen (Timeline, Shortcuts).
@@ -103,7 +143,7 @@ export function PreviewPlayer({ clip, videoSrc, sourceWidth, sourceHeight }: Pre
     const player = playerRef.current
     if (!player) return
 
-    const targetFrame = Math.round(playheadSeconds * FPS)
+    const targetFrame = Math.round(useEditorStore.getState().playheadSeconds * FPS)
 
     // Verglichen wird gegen den zuletzt VOM PLAYER gemeldeten Frame, nicht
     // gegen eine Toleranzschwelle: Der Player selbst schreibt seinen Frame in
@@ -118,45 +158,52 @@ export function PreviewPlayer({ clip, videoSrc, sourceWidth, sourceHeight }: Pre
     }
   }, [playheadSeconds, durationInFrames])
 
+  // Vorschau stumm schalten, ohne den Clip zu verändern.
+  useEffect(() => {
+    const player = playerRef.current
+    if (!player) return
+    if (previewMuted) player.mute()
+    else player.unmute()
+  }, [previewMuted])
+
   return (
-    <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-neutral-950 p-5">
-      <div className="group relative h-full max-h-full" style={{ aspectRatio: '9 / 16' }}>
+    <div className="relative h-full w-full" style={{ containerType: 'size' }}>
+      <div
+        ref={frameRef}
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+        style={{ width: `min(100cqw, ${(compositionWidth / compositionHeight) * 100}cqh)`, aspectRatio: `${compositionWidth} / ${compositionHeight}` }}
+      >
         {/* Feiner Ring plus weicher Schatten: Ohne die Kante wirkt das
             Videobild wie ein Loch in der Fläche statt wie eine Ebene darauf. */}
-        <div className="pointer-events-none absolute -inset-px z-10 rounded-[13px] shadow-[0_0_0_1px_oklch(1_0_0/0.16),0_24px_56px_-16px_oklch(0_0_0/0.85)]" />
-
-        {/* Kennzeichnung des vorgeschauten Clips.
-            Liegt im Rahmen statt daneben: Die freie Fläche links und rechts
-            hängt von der Panelhöhe ab, ein Label dort überlappt früher oder
-            später das Bild. Sichtbar nur beim Überfahren, damit die Vorschau
-            im Ruhezustand unverstellt bleibt. */}
-        <div className="transition-ui pointer-events-none absolute inset-x-0 bottom-0 z-20 flex items-center gap-2 rounded-b-xl bg-gradient-to-t from-black/85 to-transparent px-3 pt-8 pb-3 opacity-0 group-hover:opacity-100">
-          <span className="rounded bg-white/15 px-1.5 py-0.5 text-xs font-semibold text-white tabular-nums">
-            {clip.virality_score}
-          </span>
-          <span className="truncate text-xs text-white/80">{clip.title}</span>
-        </div>
+        <div className="pointer-events-none absolute -inset-px z-10 rounded-[3px] shadow-[0_0_0_1px_oklch(1_0_0/0.14),0_24px_56px_-16px_oklch(0_0_0/0.85)]" />
 
         <Player
           ref={playerRef}
           component={ClipComposition}
           inputProps={inputProps}
           durationInFrames={durationInFrames}
-          compositionWidth={COMPOSITION_WIDTH}
-          compositionHeight={COMPOSITION_HEIGHT}
+          compositionWidth={compositionWidth}
+          compositionHeight={compositionHeight}
           fps={FPS}
           playbackRate={playbackRate}
-          style={{ width: '100%', height: '100%', borderRadius: 12, overflow: 'hidden' }}
+          loop={loop}
+          style={{ width: '100%', height: '100%', borderRadius: 2, overflow: 'hidden' }}
           // Die Steuerung liegt bei Timeline und Shortcuts. Der eingebaute
           // Space-Handler würde sonst zusätzlich zu unserem feuern und den
           // Player sofort wieder anhalten.
           spaceKeyToPlayOrPause={false}
           clickToPlay={false}
           controls={false}
+          // Die Videos halten den Player beim Puffern an. Ohne wachen
+          // AudioContext käme danach jedes Mal eine Wartezeit dazu, bis er
+          // wieder hörbar läuft — der Ton selbst kommt aus dem <video>.
+          _experimentalKeepAudioContextAlive
           // Remotion verlangt ab 4 Mitarbeitern eine Company License
           // (siehe remotion.pro/license). Das Flag bestätigt die Kenntnisnahme.
           acknowledgeRemotionLicense
         />
+
+        {overlay ? <div className="absolute inset-0 z-20">{overlay}</div> : null}
       </div>
     </div>
   )

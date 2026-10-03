@@ -1,8 +1,16 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { hasCompletedOnboarding, ONBOARDING_PATH, requiresOnboarding } from '@/lib/onboarding'
 
-/** Routen, die ohne Session erreichbar sind. */
-const PUBLIC_ROUTES = ['/', '/login', '/signup', '/auth', '/api/stripe/webhook']
+const PUBLIC_ROUTES = [
+  '/', '/login', '/signup', '/auth', '/api/stripe/webhook', '/api/auth/login', '/api/oauth',
+  // Editor-Demo der Landingpage und die Vorschaubilder für geteilte Links.
+  '/demo', '/opengraph-image', '/twitter-image',
+  // Rechtsseiten: müssen ohne Konto erreichbar sein, sobald es sie gibt.
+  '/impressum', '/datenschutz', '/agb', '/widerruf',
+  // Anleitung zur Datenlöschung — Meta verlangt sie als öffentliche URL.
+  '/konto-loeschen',
+]
 
 function isPublicRoute(pathname: string) {
   return PUBLIC_ROUTES.some(
@@ -19,6 +27,16 @@ function isPublicRoute(pathname: string) {
  * wird `response` neu aufgebaut statt kopiert.
  */
 export async function updateSession(request: NextRequest) {
+  // Abgelaufene oder schon benutzte Magic Links schickt Supabase mit
+  // `error_code` auf die Startseite — dort sah niemand die Meldung, und der
+  // Login scheiterte stumm. Die Login-Seite erklärt, was zu tun ist.
+  if (request.nextUrl.pathname === '/' && request.nextUrl.searchParams.has('error_code')) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    url.search = '?error=invalid_link'
+    return NextResponse.redirect(url)
+  }
+
   let response = NextResponse.next({ request })
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -67,10 +85,36 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   if (!user && !isPublicRoute(request.nextUrl.pathname)) {
+    if (request.nextUrl.pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Bitte melde dich an.' }, { status: 401 })
+    }
     const url = request.nextUrl.clone()
     url.pathname = '/login'
+    const connectionError = url.searchParams.get('error')
+    url.search = ''
+    if (request.nextUrl.pathname === '/dashboard/connections' && connectionError) {
+      url.searchParams.set('error', connectionError === 'oauth_origin_mismatch' ? 'oauth_origin_mismatch' : 'oauth_session_expired')
+    }
     url.searchParams.set('redirect', request.nextUrl.pathname)
-    return NextResponse.redirect(url)
+    const redirect = NextResponse.redirect(url)
+    for (const cookie of response.cookies.getAll()) redirect.cookies.set(cookie)
+    return redirect
+  }
+
+  // Erster Login: erst die Kanäle, dann die App. Das Ergebnis einer
+  // Kanalverbindung (`connected`/`error`) wandert mit, falls der OAuth-Callback
+  // ohne Rücksprungziel auf der Kanäle-Seite gelandet ist.
+  if (user && !hasCompletedOnboarding(user) && requiresOnboarding(request.nextUrl.pathname)) {
+    const url = request.nextUrl.clone()
+    url.pathname = ONBOARDING_PATH
+    url.search = ''
+    for (const key of ['connected', 'error']) {
+      const value = request.nextUrl.searchParams.get(key)
+      if (value) url.searchParams.set(key, value)
+    }
+    const redirect = NextResponse.redirect(url)
+    for (const cookie of response.cookies.getAll()) redirect.cookies.set(cookie)
+    return redirect
   }
 
   return response

@@ -5,20 +5,14 @@ import type { Clip, ClipRenderStatus } from '@/types/database'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { formatTimecode } from './Timeline'
+import { formatSourceTime as formatTimecode } from './SourceStrip'
 
-/**
- * Farbgebung des Viralitäts-Scores.
- *
- * Die Schwelle bei 80 ist nicht willkürlich: Das ist derselbe Default wie
- * `auto_publish_min_score` in der Datenbank. Ein grün markierter Clip ist also
- * genau der, den die Automatik ohne Rückfrage veröffentlichen würde.
- */
+/** Dieselben Qualitätsschwellen wie in Clip-Karten, Dashboard und Analytics. */
 function scoreTone(score: number) {
-  if (score >= 80) {
+  if (score >= 90) {
     return 'bg-emerald-500/10 text-emerald-600 ring-emerald-500/25 dark:text-emerald-400'
   }
-  if (score >= 65) {
+  if (score >= 70) {
     return 'bg-amber-500/10 text-amber-600 ring-amber-500/25 dark:text-amber-400'
   }
   return 'bg-muted text-muted-foreground ring-border'

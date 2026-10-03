@@ -28,6 +28,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Lokale Daten und Remotion-Bundles des Renders — erzeugt, nicht geschrieben.
+    ".omegaclip-data/**",
   ]),
 ]);
 

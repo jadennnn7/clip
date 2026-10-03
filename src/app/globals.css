@@ -10,6 +10,7 @@
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
+  --font-display: var(--font-display);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -55,7 +56,9 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  /* Akzent: das Blau des Logos, im Hellen eine Stufe tiefer (#1670d6) —
+     Weiß darauf erreicht 4,9 : 1, das Logo-Blau selbst nur 3,1 : 1. */
+  --primary: #1670d6;
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -66,21 +69,22 @@
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --ring: #0080e6;
+  /* Diagramme: erst die Blautöne des Logos, dann Grau für Nebenreihen. */
+  --chart-1: #0080e6;
+  --chart-2: #1670d6;
+  --chart-3: #049dff;
+  --chart-4: oklch(0.556 0 0);
+  --chart-5: oklch(0.371 0 0);
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary: #1670d6;
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-ring: #0080e6;
 }
 
 .dark {
@@ -90,8 +94,10 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  /* Im Dunkeln das Logo-Blau selbst, mit dunkler Schrift (8,8 : 1) — wie
+     die Knöpfe der Landing-Page. */
+  --primary: #049dff;
+  --primary-foreground: #04162b;
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
@@ -101,20 +107,20 @@
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --ring: #049dff;
+  --chart-1: #049dff;
+  --chart-2: #0080e6;
+  --chart-3: #cbe9ff;
+  --chart-4: oklch(0.556 0 0);
+  --chart-5: oklch(0.371 0 0);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-primary: #049dff;
+  --sidebar-primary-foreground: #04162b;
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-ring: #049dff;
 }
 
 @layer base {
@@ -126,6 +132,10 @@
   }
   html {
     @apply font-sans;
+  }
+  /* Markierter Text im Blau des Logos statt im Grau des Systems. */
+  ::selection {
+    background-color: color-mix(in oklab, var(--primary) 30%, transparent);
   }
 }
 /* ===========================================================================
@@ -139,6 +149,21 @@
   /* Eine Dauer und eine Kurve für die gesamte Oberfläche. Uneinheitliches
      Timing ist der Hauptgrund, warum Interfaces „billig" wirken. */
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Die zweite Kurve, nur für Glas: schießt leicht über und federt zurück.
+     Flüssiges bewegt sich nicht linear ins Ziel, es schwappt. */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Das Hellblau aus dem Logo, direkt aus `/Logo.png` abgenommen: die helle
+   Fläche oben, der Mittelton, die tiefe Kante unten. Feste Werte, ohne
+   Hell/Dunkel — die Landing-Page ist immer dunkel. In der App tragen die
+   Theme-Tokens (`primary`, `--brand-glow`) dasselbe Blau. `ink` ist die
+   Schrift auf blauem Grund (Kontrast zu `brand` ≈ 9 : 1). */
+@theme {
+  --color-brand-light: #cbe9ff;
+  --color-brand: #049dff;
+  --color-brand-deep: #0080e6;
+  --color-brand-ink: #04162b;
 }
 
 @layer utilities {
@@ -177,6 +202,755 @@
   animation: rise-in 420ms var(--ease-out-quint) both;
 }
 
+/* Für große Schrift: taucht aus der Unschärfe auf, als würde sie hinter
+   Glas scharf gestellt. Nicht für Elemente, die selbst Glas enthalten — ein
+   `filter` am Vorfahren schneidet deren `backdrop-filter` vom Grund ab. */
+@keyframes rise-in-blur {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+    filter: blur(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+.rise-in-blur {
+  animation: rise-in-blur 700ms var(--ease-out-quint) both;
+}
+
+/* ===========================================================================
+   Clip-Erstellung: Ladezustand
+   ---------------------------------------------------------------------------
+   Die Animation zeigt, was die Pipeline gerade tut: Ein 9:16-Sucher gleitet
+   über das Quellbild und sucht den Ausschnitt, darunter läuft ein Abspielkopf
+   über die Tonspur. Keine neue Farbe — Licht und Schärfe tragen die Bewegung.
+
+   Sucher und scharfes Bild laufen mit identischen Stopps und derselben Kurve.
+   Die Werte ergeben sich aus der Geometrie: Das Fenster ist 81/256 der
+   Bandbreite breit (9:16 bei voller Höhe eines 16:9-Bandes); `translateX` in
+   Prozent bezieht sich auf die eigene Breite, `inset` auf die des Bandes.
+   =========================================================================== */
+
+@keyframes viewfinder-glide {
+  0%, 10% { transform: translateX(8%); }
+  45%, 55% { transform: translateX(205%); }
+  90%, 100% { transform: translateX(8%); }
+}
+
+@keyframes viewfinder-reveal {
+  0%, 10% { clip-path: inset(0 65.83% 0 2.53% round 6px); }
+  45%, 55% { clip-path: inset(0 3.5% 0 64.86% round 6px); }
+  90%, 100% { clip-path: inset(0 65.83% 0 2.53% round 6px); }
+}
+
+.viewfinder-glide {
+  animation: viewfinder-glide 7s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+.viewfinder-reveal {
+  animation: viewfinder-reveal 7s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+/* Der Sucher „stellt scharf": Seine Lichtkante atmet, während er steht. */
+@keyframes viewfinder-focus {
+  0%, 100% { box-shadow: 0 0 0 1px rgb(255 255 255 / 0.55), 0 0 18px -2px rgb(255 255 255 / 0.25); }
+  50% { box-shadow: 0 0 0 1px rgb(255 255 255 / 0.9), 0 0 28px 0 rgb(255 255 255 / 0.4); }
+}
+
+.viewfinder-focus {
+  animation: viewfinder-focus 3.5s ease-in-out infinite;
+}
+
+/* Tonspur: Balken federn, ein Abspielkopf wandert darüber. */
+@keyframes waveform-bounce {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
+
+.waveform-bounce {
+  transform-origin: bottom;
+  animation: waveform-bounce 1.2s var(--ease-out-quint) infinite;
+}
+
+@keyframes playhead-scan {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0%); }
+}
+
+.playhead-scan {
+  animation: playhead-scan 2.8s linear infinite;
+}
+
+/* Platzhalter für Clips, die gleich entstehen: ein Lichtstreif zieht über
+   das Glas. Hell auf dunkel, dunkel auf hell — über `--foreground`. */
+@keyframes shimmer-sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    color-mix(in oklab, var(--foreground) 9%, transparent) 50%,
+    transparent 80%
+  );
+  animation: shimmer-sweep 2.4s var(--ease-out-quint) infinite;
+  animation-delay: inherit;
+  pointer-events: none;
+}
+
+/* Ladekarte: Das künftige Clip-Bild „entwickelt" sich. Ein Lichtband fährt
+   von oben nach unten über das gedimmte Graustufenbild; wo es vorbeizieht,
+   erscheint das Bild in Farbe. Maske und Linie laufen mit derselben Kurve:
+   Bei einer Maskenhöhe von 40 % liegt die Bandmitte bei 0,6·p + 0,2 — von
+   −50 % bis 150 % also genau dort, wo die Linie von −10 % bis 110 % läuft. */
+@keyframes processing-develop {
+  from { -webkit-mask-position: 0 -50%; mask-position: 0 -50%; }
+  to { -webkit-mask-position: 0 150%; mask-position: 0 150%; }
+}
+
+.processing-develop {
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 38%, #000 62%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 38%, #000 62%, transparent);
+  -webkit-mask-size: 100% 40%;
+  mask-size: 100% 40%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  animation: processing-develop 3.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+@keyframes processing-scanline {
+  0% { top: -10%; opacity: 0; }
+  12%, 88% { opacity: 1; }
+  100% { top: 110%; opacity: 0; }
+}
+
+.processing-scanline {
+  animation: processing-scanline 3.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+/* Fortschritt ohne bekannte Prozentzahl: ein Lichtpunkt läuft durchs Segment. */
+@keyframes segment-indeterminate {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
+}
+
+.segment-indeterminate {
+  animation: segment-indeterminate 1.6s var(--ease-out-quint) infinite;
+}
+
+/* Eingabeleiste, während ein Link startet: Ein Lichtstreif im Blau des
+   Knopfs läuft über den Glasrand, von links nach rechts. Linear statt im
+   Kreis — ein umlaufender Kegel hetzt bei der breiten Kapsel über die
+   kurzen Seiten und kriecht über die langen. Darunter liegt der Rand
+   schwach getönt, damit die Leiste auch zwischen zwei Durchläufen „an" ist.
+   Position und Rundung setzt das Element selbst (`-inset-2 rounded-…`). */
+@keyframes intake-sheen {
+  from { background-position: -66.7% 0, 0 0; }
+  to { background-position: 166.7% 0, 0 0; }
+}
+
+.intake-sheen {
+  position: absolute;
+  padding: 1.5px;
+  pointer-events: none;
+  background-image:
+    linear-gradient(90deg, transparent, var(--primary) 35%, color-mix(in oklab, var(--primary) 45%, white) 50%, var(--primary) 65%, transparent),
+    linear-gradient(color-mix(in oklab, var(--primary) 28%, transparent), color-mix(in oklab, var(--primary) 28%, transparent));
+  background-size: 40% 100%, 100% 100%;
+  background-repeat: no-repeat;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  animation: intake-sheen 2.2s cubic-bezier(0.45, 0, 0.55, 1) infinite, intake-fade 600ms var(--ease-out-quint) both;
+}
+
+@keyframes intake-fade {
+  from { opacity: 0; }
+}
+
+/* Vorschaubild und Häkchen springen herein wie ein Tropfen. */
+@keyframes intake-pop {
+  from { opacity: 0; transform: scale(0.6); filter: blur(4px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+
+.intake-thumb-in {
+  animation: intake-pop 500ms var(--ease-spring) both;
+}
+
+/* Der laufende Schritt: Licht zieht durch die Schrift. */
+@keyframes text-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: 0 0; }
+}
+
+.text-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--foreground) 55%, transparent) 35%,
+    var(--foreground) 50%,
+    color-mix(in oklab, var(--foreground) 55%, transparent) 65%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: text-shimmer 1.8s linear infinite;
+}
+
+/* ===========================================================================
+   Liquid Glass
+   ---------------------------------------------------------------------------
+   Das Material der App-Oberfläche. Glas selbst hat keine Farbe: Es ist nur
+   Weiß- und Schwarz-Alpha über dem, was darunter liegt. Die Eigenständigkeit
+   kommt aus dem Material — Unschärfe, Lichtkante, Tiefe —, das Blau des
+   Logos nur aus dem Licht darunter und den Akzenten darauf.
+
+   - `.ambient`      Der Grund. Umgebungslicht mit blauem Schein oben und
+                     feinem Korn —
+                     über einer Volltonfläche wäre jede Unschärfe unsichtbar,
+                     Glas läse sich dort als graues Rechteck.
+   - `.glass`        Schwebende Flächen mit echter Unschärfe: Leisten und das
+                     Eingabefeld, also alles, worunter Inhalt durchläuft.
+   - `.glass-tile`   Dasselbe Material ohne Unschärfe, für Karten im Inhalt.
+                     Unter ihnen liegt nur der weiche Grund; Unschärfe würde
+                     dort nichts zeigen, kostet aber je Karte eine Ebene.
+   - `.glass-lens`   Die dichtere Linse für „ausgewählt" in einer Glasfläche.
+                     Glas auf Glas gibt es nicht; die Linse ist dichter.
+   - `.glass-field`  Eingelassene Mulde in Glas, für Eingabefelder.
+   - `.glass-chip`   Kleine Plaketten über Bildmaterial. Immer dunkel, weil
+                     das Material darunter (Cover, Video) immer dunkel ist.
+   - `.glass-menu`   Popover und Menüs. Dichter als `.glass`, weil dort Text
+                     über beliebigem Inhalt sicher lesbar bleiben muss.
+   - `.liquid`       Die gefüllte Hauptaktion: ein Tropfen im Blau des Logos
+                     (im Hellen tiefer), mit Meniskus — statt einer Fläche.
+   - `.liquid-press` Glasknöpfe quellen beim Drücken auf und federn zurück.
+
+   Was das Glas flüssig macht:
+   - Brechung: `useRefraction` legt eine Verschiebungskarte in den
+     `backdrop-filter` — was unter der Kante durchläuft, verbiegt sich.
+   - Kaustik: Unter jeder Fläche liegt im Schatten ein schmaler Lichtstreif —
+     das Licht, das durch das Glas fällt und dahinter gebündelt wird.
+   =========================================================================== */
+
+@property --glass-refraction {
+  syntax: '*';
+  inherits: false;
+}
+
+@property --glass-blur {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 24px;
+}
+
+:root {
+  --ambient-base: oklch(0.955 0 0);
+  --ambient-light: rgb(255 255 255 / 0.95);
+  --ambient-shade: rgb(0 0 0 / 0.06);
+  --ambient-grain: 0.035;
+  /* Das Licht der App ist das Blau des Logos — derselbe Schein wie über dem
+     Hero der Landing-Page, nur leiser. Im Hellen der tiefe Ton, der helle
+     verschwände auf Weiß. */
+  --brand-glow: rgb(0 128 230 / 0.16);
+
+  --glass-fill: linear-gradient(180deg, rgb(255 255 255 / 0.82), rgb(255 255 255 / 0.62));
+  --glass-fill-hover: linear-gradient(180deg, rgb(255 255 255 / 0.9), rgb(255 255 255 / 0.74));
+  /* Die Lichtkante: oben links hell, wo das Licht auftrifft, unten rechts
+     ein zweiter, schwächerer Reflex — so liest sich die Fläche als Körper
+     und nicht als halbtransparentes Rechteck. */
+  --glass-rim: linear-gradient(
+    150deg,
+    rgb(255 255 255 / 1),
+    rgb(255 255 255 / 0.5) 28%,
+    rgb(0 0 0 / 0.07) 62%,
+    rgb(0 0 0 / 0.1) 85%,
+    rgb(255 255 255 / 0.7)
+  );
+  /* Der erste Schatten ist Licht: die Kaustik, ein heller Streif mitten im
+     Schlagschatten. Er steht vorn in der Liste, damit er über dem dunklen
+     liegt. Die zwei Innenkanten geben dem Glas Dicke — oben Licht, unten
+     ein Hauch Tiefe. */
+  --glass-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 20px 18px -18px rgb(255 255 255 / 1),
+    0 12px 32px -12px rgb(0 0 0 / 0.16), inset 0 1px 0 rgb(255 255 255 / 0.9),
+    inset 0 -1px 1px rgb(0 0 0 / 0.03);
+  --glass-shadow-hover: 0 1px 2px rgb(0 0 0 / 0.05), 0 28px 22px -22px rgb(255 255 255 / 1),
+    0 22px 44px -16px rgb(0 0 0 / 0.24), inset 0 1px 0 rgb(255 255 255 / 0.95),
+    inset 0 -1px 1px rgb(0 0 0 / 0.04);
+  /* Kachelkante: helles Licht oben, fast unsichtbar an den Seiten — kein
+     durchgezogener Rahmenstrich. */
+  --glass-tile-fill: linear-gradient(180deg, rgb(255 255 255 / 0.72), rgb(255 255 255 / 0.48));
+  --glass-tile-rim: linear-gradient(
+    165deg,
+    rgb(255 255 255 / 0.95) 0%,
+    rgb(255 255 255 / 0.35) 18%,
+    rgb(255 255 255 / 0.08) 48%,
+    rgb(0 0 0 / 0.04) 78%,
+    rgb(255 255 255 / 0.4) 100%
+  );
+  --glass-tile-shadow: 0 1px 1px rgb(0 0 0 / 0.03), 0 10px 28px -14px rgb(0 0 0 / 0.14),
+    inset 0 1px 0 rgb(255 255 255 / 0.85), inset 0 -0.5px 0 rgb(0 0 0 / 0.04);
+  --glass-tile-shadow-hover: 0 2px 2px rgb(0 0 0 / 0.04), 0 18px 36px -16px rgb(0 0 0 / 0.2),
+    inset 0 1px 0 rgb(255 255 255 / 0.95), inset 0 -0.5px 0 rgb(0 0 0 / 0.05);
+  /* Weiß auf weißlichem Glas trägt nur über den Schatten — deshalb ist er
+     hier kräftiger als im Dunkeln, wo die Linse über ihre Helligkeit wirkt. */
+  --glass-lens: rgb(255 255 255 / 1);
+  --glass-lens-shadow: 0 1px 2px rgb(0 0 0 / 0.1), 0 4px 12px -3px rgb(0 0 0 / 0.16),
+    inset 0 0 0 1px rgb(0 0 0 / 0.05);
+  --glass-field: rgb(0 0 0 / 0.035);
+  --glass-field-shadow: inset 0 1px 2px rgb(0 0 0 / 0.06), inset 0 0 0 1px rgb(0 0 0 / 0.05);
+  --glass-menu: rgb(255 255 255 / 0.8);
+  --glass-menu-shadow: 0 0 0 1px rgb(0 0 0 / 0.07), 0 18px 44px -14px rgb(0 0 0 / 0.28),
+    inset 0 1px 0 rgb(255 255 255 / 0.7);
+
+  /* Frost / Liquid Glass: durchsichtige Paneele wie im Apple-Dashboard —
+     weiche Unschärfe, dünne helle Kante, wenig Eigenfarbe. */
+  --glass-frost-fill: linear-gradient(
+    165deg,
+    rgb(255 255 255 / 0.42) 0%,
+    rgb(255 255 255 / 0.22) 45%,
+    rgb(255 255 255 / 0.28) 100%
+  );
+  --glass-frost-rim: linear-gradient(
+    145deg,
+    rgb(255 255 255 / 0.85),
+    rgb(255 255 255 / 0.35) 40%,
+    rgb(255 255 255 / 0.15) 70%,
+    rgb(255 255 255 / 0.5)
+  );
+  --glass-frost-shadow: 0 8px 32px -12px rgb(0 0 0 / 0.14),
+    inset 0 1px 0 rgb(255 255 255 / 0.65), inset 0 -1px 0 rgb(0 0 0 / 0.04);
+  --glass-frost-field: rgb(255 255 255 / 0.22);
+  --glass-frost-field-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.4),
+    inset 0 1px 2px rgb(0 0 0 / 0.04);
+
+  /* Meniskus: die gewölbte, hellere Oberseite eines Tropfens. Im Hellen ein
+     tiefes Logo-Blau, damit die weiße Schrift darauf lesbar bleibt. */
+  --liquid-fill: radial-gradient(120% 90% at 50% -25%, rgb(255 255 255 / 0.24), transparent 58%),
+    linear-gradient(180deg, #2277e2, #1260c6);
+  --liquid-fg: oklch(0.985 0 0);
+  --liquid-shadow: inset 0 1px 0 rgb(255 255 255 / 0.24), inset 0 -1px 0 rgb(0 0 0 / 0.35),
+    0 1px 2px rgb(0 0 0 / 0.16), 0 8px 18px -8px rgb(0 0 0 / 0.5);
+}
+
+.dark {
+  --ambient-base: oklch(0.13 0 0);
+  --ambient-light: rgb(255 255 255 / 0.085);
+  --ambient-shade: rgb(0 0 0 / 0.55);
+  --ambient-grain: 0.05;
+  --brand-glow: rgb(4 157 255 / 0.24);
+
+  --glass-fill: linear-gradient(180deg, rgb(255 255 255 / 0.1), rgb(255 255 255 / 0.05));
+  --glass-fill-hover: linear-gradient(180deg, rgb(255 255 255 / 0.13), rgb(255 255 255 / 0.07));
+  --glass-rim: linear-gradient(
+    150deg,
+    rgb(255 255 255 / 0.34),
+    rgb(255 255 255 / 0.1) 30%,
+    rgb(255 255 255 / 0.03) 62%,
+    rgb(255 255 255 / 0.05) 85%,
+    rgb(255 255 255 / 0.18)
+  );
+  --glass-shadow: 0 22px 20px -20px rgb(255 255 255 / 0.1), 0 16px 40px -12px rgb(0 0 0 / 0.7),
+    inset 0 1px 0 rgb(255 255 255 / 0.08), inset 0 -1px 0 rgb(255 255 255 / 0.02);
+  --glass-shadow-hover: 0 30px 24px -24px rgb(255 255 255 / 0.14), 0 24px 50px -14px rgb(0 0 0 / 0.85),
+    inset 0 1px 0 rgb(255 255 255 / 0.12), inset 0 -1px 0 rgb(255 255 255 / 0.03);
+  --glass-tile-fill: linear-gradient(180deg, rgb(255 255 255 / 0.09), rgb(255 255 255 / 0.03));
+  --glass-tile-rim: linear-gradient(
+    155deg,
+    rgb(255 255 255 / 0.65) 0%,
+    rgb(255 255 255 / 0.22) 14%,
+    rgb(255 255 255 / 0.05) 40%,
+    rgb(255 255 255 / 0.02) 68%,
+    rgb(255 255 255 / 0.28) 100%
+  );
+  --glass-tile-shadow: 0 0 0 1px rgb(255 255 255 / 0.07), 0 10px 28px -14px rgb(0 0 0 / 0.6),
+    inset 0 1px 0 rgb(255 255 255 / 0.22), inset 0 -0.5px 0 rgb(255 255 255 / 0.05);
+  --glass-tile-shadow-hover: 0 0 0 1px rgb(255 255 255 / 0.1), 0 18px 40px -14px rgb(0 0 0 / 0.75),
+    inset 0 1px 0 rgb(255 255 255 / 0.3), inset 0 -0.5px 0 rgb(255 255 255 / 0.07);
+  --glass-lens: rgb(255 255 255 / 0.12);
+  --glass-lens-shadow: inset 0 1px 0 rgb(255 255 255 / 0.14), inset 0 0 0 1px rgb(255 255 255 / 0.07),
+    0 4px 12px -4px rgb(0 0 0 / 0.5);
+  --glass-field: rgb(0 0 0 / 0.24);
+  --glass-field-shadow: inset 0 1px 2px rgb(0 0 0 / 0.35), inset 0 0 0 1px rgb(255 255 255 / 0.06);
+  --glass-menu: oklch(0.2 0 0 / 0.8);
+  --glass-menu-shadow: 0 0 0 1px rgb(255 255 255 / 0.1), 0 22px 50px -14px rgb(0 0 0 / 0.8),
+    inset 0 1px 0 rgb(255 255 255 / 0.08);
+
+  --glass-frost-fill: linear-gradient(
+    165deg,
+    rgb(255 255 255 / 0.16) 0%,
+    rgb(255 255 255 / 0.07) 48%,
+    rgb(255 255 255 / 0.1) 100%
+  );
+  --glass-frost-rim: linear-gradient(
+    145deg,
+    rgb(255 255 255 / 0.45),
+    rgb(255 255 255 / 0.12) 40%,
+    rgb(255 255 255 / 0.06) 70%,
+    rgb(255 255 255 / 0.22)
+  );
+  --glass-frost-shadow: 0 12px 40px -16px rgb(0 0 0 / 0.55),
+    inset 0 1px 0 rgb(255 255 255 / 0.28), inset 0 -1px 0 rgb(255 255 255 / 0.04);
+  --glass-frost-field: rgb(255 255 255 / 0.08);
+  --glass-frost-field-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.14),
+    inset 0 1px 2px rgb(0 0 0 / 0.18);
+
+  /* Im Dunkeln ist der Tropfen blau wie das Logo — derselbe wie
+     `.liquid-brand` auf der Landing-Page; unten trübt er sich ein, das macht
+     ihn rund. Weiße Schrift wie auf der Landing-Page; der feine Schatten
+     trägt sie über das helle Blau oben im Tropfen. */
+  --liquid-fill: radial-gradient(120% 100% at 50% 125%, rgb(4 22 43 / 0.2), transparent 60%),
+    linear-gradient(180deg, #45bcff, #049dff 55%, #008ef0);
+  --liquid-fg: #fff;
+  --liquid-text-shadow: 0 1px 1.5px rgb(4 22 43 / 0.45);
+  --liquid-shadow: inset 0 1px 0 rgb(255 255 255 / 0.5), inset 0 -1px 0 rgb(4 22 43 / 0.3),
+    0 1px 2px rgb(0 0 0 / 0.4), 0 10px 28px -8px rgb(4 157 255 / 0.45);
+}
+
+@layer components {
+  /* Zwei Lichtinseln und ein Schatten, fest im Raum: Der Inhalt scrollt
+     darüber, das Licht bleibt stehen — wie ein Raum, nicht wie eine Tapete. */
+  /* Flacher Grund statt mehrerer Lichtblasen — die Bubbly-Orbs hinter
+     Projekte/Übersicht wirkten wie ein Lava-Lamp-Hintergrund. Ein dezenter
+     Schein oben reicht für Tiefe; der Rest bleibt ruhig und SaaS-klar. */
+  .ambient {
+    position: relative;
+    isolation: isolate;
+    background-color: var(--ambient-base);
+    background-image: radial-gradient(ellipse 60% 32% at 50% -6%, var(--brand-glow), transparent 72%),
+      radial-gradient(ellipse 80% 40% at 50% -5%, var(--ambient-light), transparent 70%);
+  }
+
+  /* Korn: Ohne es wirkt die Unschärfe hinter dem Glas wie ein Rendering-
+     Fehler, mit ihm wie Mattierung. Graustufen, keine Farbe. */
+  .ambient::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    opacity: var(--ambient-grain);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+
+  .glass,
+  .glass-tile {
+    position: relative;
+    isolation: isolate;
+    background: var(--glass-fill);
+    box-shadow: var(--glass-shadow);
+  }
+
+  /* Karten: weichere Kante als schwebende Chromflächen — kein harter
+     Umriss, sondern Licht oben und Schatten unten. */
+  .glass-tile {
+    background: var(--glass-tile-fill, var(--glass-fill));
+    box-shadow: var(--glass-tile-shadow, var(--glass-shadow));
+  }
+
+  /* `--glass-refraction` setzt nur `useRefraction`, und nur in Chromium.
+     Brechendes Glas ist klarer (`--glass-blur`), sonst verschwände die
+     Brechung in der Mattierung. */
+  .glass {
+    /* Kein Sättigungsboost: sonst saugt das Glas Farbe hinter dem Zeiger auf. */
+    -webkit-backdrop-filter: blur(24px) saturate(100%);
+    backdrop-filter: var(--glass-refraction,) blur(var(--glass-blur)) saturate(100%);
+  }
+
+  /* Apple-Frost: klarer und durchsichtiger als `.glass` — für große
+     Eingabeflächen, die den Raum dahinter noch zeigen sollen. */
+  .glass-frost {
+    background: var(--glass-frost-fill);
+    box-shadow: var(--glass-frost-shadow);
+    -webkit-backdrop-filter: blur(48px) saturate(140%);
+    backdrop-filter: blur(48px) saturate(140%);
+  }
+
+  .glass-frost::before {
+    background: var(--glass-frost-rim);
+  }
+
+  .glass-frost .glass-field {
+    background: var(--glass-frost-field);
+    box-shadow: var(--glass-frost-field-shadow);
+  }
+
+  /* Lichtkante als 1-Pixel-Rahmen aus einem Verlauf. Ein echter `border`
+     kann keinen Verlauf tragen, der mit dem Radius mitläuft; die Maske
+     schneidet aus einer vollen Fläche alles bis auf den Rand heraus.
+     Festes Licht von oben links — kein Zeiger-Highlight, das Farbe mitzieht. */
+  .glass::before,
+  .glass-tile::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: var(--glass-rim);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .glass-tile::before {
+    background: var(--glass-tile-rim, var(--glass-rim));
+  }
+
+  .glass-interactive {
+    transition: box-shadow 300ms var(--ease-out-quint), transform 550ms var(--ease-spring);
+  }
+
+  @media (hover: hover) {
+    .glass-interactive:hover {
+      background: var(--glass-fill-hover);
+      box-shadow: var(--glass-shadow-hover);
+    }
+
+    .glass-tile.glass-interactive:hover {
+      background: var(--glass-tile-fill);
+      box-shadow: var(--glass-tile-shadow-hover);
+    }
+  }
+
+  .glass-lens {
+    background: var(--glass-lens);
+    box-shadow: var(--glass-lens-shadow);
+  }
+
+  /*
+   * Sidebar-Hover: eine Glasblase, die unter der Zeile aufquillt.
+   * Klein starten, mit Feder auf volle Größe — und die Zeile selbst wächst
+   * leicht mit, wie ein Tropfen unter dem Finger.
+   */
+  .sidebar-bubble {
+    position: relative;
+    isolation: isolate;
+    transform-origin: center;
+    transition:
+      transform 600ms var(--ease-spring),
+      color 250ms var(--ease-out-quint);
+  }
+
+  .sidebar-bubble::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: linear-gradient(
+      165deg,
+      rgb(255 255 255 / 0.55) 0%,
+      rgb(255 255 255 / 0.28) 55%,
+      rgb(255 255 255 / 0.38) 100%
+    );
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    backdrop-filter: blur(16px) saturate(140%);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.7),
+      inset 0 -1px 1px rgb(0 0 0 / 0.06),
+      inset 1px 1px 1px -0.5px rgb(255 255 255 / 0.5),
+      0 4px 14px -6px rgb(0 0 0 / 0.18);
+    opacity: 0;
+    transform: scale(0.88);
+    transition:
+      opacity 300ms var(--ease-out-quint),
+      transform 600ms var(--ease-spring),
+      box-shadow 300ms var(--ease-out-quint);
+  }
+
+  .dark .sidebar-bubble::before {
+    background: linear-gradient(
+      165deg,
+      rgb(255 255 255 / 0.16) 0%,
+      rgb(255 255 255 / 0.06) 55%,
+      rgb(255 255 255 / 0.1) 100%
+    );
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.28),
+      inset 0 -1px 0 rgb(255 255 255 / 0.04),
+      inset 1px 1px 1px -0.5px rgb(255 255 255 / 0.18),
+      0 6px 16px -6px rgb(0 0 0 / 0.45);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .sidebar-bubble:hover::before {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .sidebar-bubble:hover {
+      transform: scale(1.04);
+    }
+
+    .sidebar-bubble:active {
+      transform: scale(1.08);
+      transition-duration: 180ms;
+    }
+
+    .sidebar-bubble:active::before {
+      transform: scale(1.04);
+      box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / 0.85),
+        inset 0 -1px 1px rgb(0 0 0 / 0.08),
+        0 2px 8px -4px rgb(0 0 0 / 0.2);
+      transition-duration: 180ms;
+    }
+
+    .dark .sidebar-bubble:active::before {
+      box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / 0.4),
+        inset 0 -1px 0 rgb(255 255 255 / 0.06),
+        0 2px 10px -4px rgb(0 0 0 / 0.5);
+    }
+  }
+
+  /* Aktive Zeile: Linse übernimmt, Blase bleibt aus. */
+  .sidebar-bubble[data-active]::before,
+  .sidebar-bubble[data-active]:hover::before,
+  .sidebar-bubble[data-active]:active::before {
+    opacity: 0;
+    transform: scale(0.88);
+    transition-duration: 250ms;
+  }
+
+  .sidebar-bubble[data-active]:hover,
+  .sidebar-bubble[data-active]:active {
+    transform: none;
+  }
+
+  .glass-field {
+    background: var(--glass-field);
+    box-shadow: var(--glass-field-shadow);
+  }
+
+  .glass-chip {
+    background: rgb(0 0 0 / 0.38);
+    color: white;
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    backdrop-filter: blur(12px) saturate(160%);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.22), inset 0 0 0 1px rgb(255 255 255 / 0.1),
+      0 4px 12px -4px rgb(0 0 0 / 0.4);
+  }
+
+  .glass-menu {
+    background: var(--glass-menu);
+    -webkit-backdrop-filter: blur(28px) saturate(100%);
+    backdrop-filter: blur(28px) saturate(100%);
+    box-shadow: var(--glass-menu-shadow);
+  }
+
+  .liquid {
+    background: var(--liquid-fill);
+    color: var(--liquid-fg);
+    text-shadow: var(--liquid-text-shadow, none);
+    box-shadow: var(--liquid-shadow);
+  }
+
+  /* Glasknöpfe geben beim Drücken nicht nach, sie quellen auf — wie ein
+     Tropfen unter dem Finger — und federn beim Loslassen zurück. Der Zustand
+     selbst steht unten ohne Layer, damit er Hover-Utilities schlägt. */
+  .liquid-press {
+    transition: transform 600ms var(--ease-spring), background-color 200ms var(--ease-out-quint),
+      box-shadow 200ms var(--ease-out-quint), color 150ms var(--ease-out-quint);
+  }
+
+  /* Randunschärfe unter der schwebenden Kopfleiste: Inhalt, der unter ihr
+     durchläuft, verschwimmt und blendet aus, statt hart gegen die Inseln
+     zu stoßen. */
+  .scroll-edge {
+    background: linear-gradient(to bottom, color-mix(in oklab, var(--ambient-base) 70%, transparent), transparent);
+    /* Nur leicht unscharf: Die Inseln darüber sollen den Inhalt noch
+       brechen können, und Brechung von Brei sieht man nicht. */
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    -webkit-mask-image: linear-gradient(to bottom, #000 40%, transparent);
+    mask-image: linear-gradient(to bottom, #000 40%, transparent);
+  }
+}
+
+/* Ohne Unschärfe (ältere Browser, „Transparenz reduzieren") wäre Glas nur
+   ein halbtransparentes Rechteck über unruhigem Grund — dann lieber satt. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass,
+  .glass-menu {
+    background: var(--popover);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass,
+  .glass-tile,
+  .glass-menu {
+    background: var(--popover);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* Klebende Leisten im Inhalt. Solange sie kleben, liegt hinter ihnen eine
+   Randunschärfe wie unter der Kopfleiste — sonst schimmerten Plaketten und
+   Titel der Karten durch die Pillen. Ob sie kleben, weiß nur der Browser
+   (`scroll-state`); wo er es nicht kann, bleibt die Unschärfe aus. */
+.sticky-bar {
+  container-type: scroll-state;
+}
+
+.sticky-bar-edge {
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--ambient-base) 78%, transparent),
+    color-mix(in oklab, var(--ambient-base) 45%, transparent)
+  );
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 16px, #000 62%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 16px, #000 62%, transparent);
+  opacity: 0;
+  transition: opacity 250ms var(--ease-out-quint);
+}
+
+@container scroll-state(stuck: top) {
+  .sticky-bar-edge {
+    opacity: 1;
+  }
+}
+
+.liquid-press:active {
+  transform: scale(1.12);
+  background-color: var(--glass-lens);
+  box-shadow: var(--glass-lens-shadow);
+  transition-duration: 160ms;
+}
+
+/* Große Glasflächen quellen weniger, sonst springen sie aus dem Raster. */
+.glass.liquid-press:active {
+  transform: scale(1.06);
+}
+
+/* Die Kopfleiste schwebt über den Seiten, der Inhalt läuft unter ihr durch.
+   Jede Seite bringt ihren eigenen Scroll-Container mit — entweder ein Div mit
+   `overflow-y-auto` oder eine ScrollArea. Beide bekommen hier den Abstand zur
+   Leiste als Innenabstand, damit er mitscrollt, statt den Inhalt abzuschneiden. */
+[data-slot='app-main'] > .overflow-y-auto,
+[data-slot='app-main'] > [data-slot='scroll-area'] > [data-slot='scroll-area-viewport'] {
+  padding-top: var(--app-top);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -185,5 +959,1166 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* ===========================================================================
+   OmegaClip Clip-Detail Design System
+   ---------------------------------------------------------------------------
+   Eigenständiges Dark-Mode-Design mit Emerald-Akzent. Dunkler als das
+   Standard-Theme, mit subtilen Glow-Effekten und weichen Radien.
+   =========================================================================== */
+
+/* Backgrounds */
+.omega-base {
+  background-color: #080808;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  isolation: isolate;
+}
+.omega-surface { background-color: #111113; }
+.omega-elevated { background-color: #18181b; }
+.omega-player { background-color: #0c0c0e; }
+
+/* Surface mit subtiler Border */
+.omega-card {
+  background-color: #111113;
+  border: 1px solid #27272a;
+  border-radius: 14px;
+}
+
+/* Player-Container mit Emerald-Glow */
+.omega-player-card {
+  background-color: #111113;
+  border: 1px solid rgba(52, 211, 153, 0.08);
+  border-radius: 16px;
+  box-shadow:
+    0 0 0 1px rgba(52, 211, 153, 0.06),
+    0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+/* Score-Glow: subtiler Emerald-Schein hinter der Zahl */
+.omega-score-glow {
+  filter: drop-shadow(0 0 12px rgba(52, 211, 153, 0.15));
+}
+
+/* Progress-Bar Track */
+.omega-bar-track {
+  height: 5px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.omega-bar-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background-color: #34d399;
+  transition: width 500ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Sidebar-Action-Buttons */
+.omega-action {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #a1a1aa;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  outline: none;
+  transition: all 150ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.omega-action:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+.omega-action:focus-visible {
+  box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.4);
+}
+
+/* Icon-Badge in Sidebar-Actions */
+.omega-icon-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.omega-icon-badge-red {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.omega-icon-badge-emerald {
+  background: rgba(52, 211, 153, 0.1);
+}
+
+/* CTA-Button: Hochskalieren & herunterladen */
+.omega-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  width: 100%;
+  height: 56px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #34d399 0%, #10b981 100%);
+  color: #064e3b;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  outline: none;
+  box-shadow:
+    0 4px 16px rgba(52, 211, 153, 0.3),
+    0 2px 6px rgba(0, 0, 0, 0.4);
+  transition: all 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.omega-cta:hover {
+  background: linear-gradient(180deg, #6ee7b7 0%, #34d399 100%);
+  box-shadow:
+    0 6px 24px rgba(52, 211, 153, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.omega-cta:active {
+  transform: scale(0.98);
+}
+
+.omega-cta:focus-visible {
+  box-shadow:
+    0 4px 16px rgba(52, 211, 153, 0.3),
+    0 2px 6px rgba(0, 0, 0, 0.4),
+    0 0 0 3px rgba(52, 211, 153, 0.4);
+}
+
+/* Credits-Badge im CTA */
+.omega-credits {
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.375rem;
+  background: rgba(6, 78, 59, 0.3);
+  font-size: 11px;
+  font-weight: 600;
+  color: #a7f3d0;
+  letter-spacing: 0.03em;
+}
+
+/* Divider für Sidebar */
+.omega-divider {
+  height: 1px;
+  background: rgba(39, 39, 42, 0.6);
+  margin: 4px 0;
+}
+
+/* Transcript-Highlight (aktuelles Wort) */
+.omega-word-current {
+  background: rgba(52, 211, 153, 0.2);
+  color: #6ee7b7;
+  border-radius: 0.25rem;
+  padding: 0 0.15em;
+}
+
+/* Subtile Border-Farben */
+.omega-border { border-color: #27272a; }
+.omega-border-subtle { border-color: #1c1c1f; }
+
+/* ===========================================================================
+   Landing-Page
+   ---------------------------------------------------------------------------
+   Nur für `src/app/page.tsx`. Die Seite ist immer dunkel (`.dark` an ihrer
+   Wurzel), unabhängig vom System-Theme — der Hero-Shader ist es auch, und
+   ein Umbruch auf Weiß direkt darunter las sich wie ein Seitenwechsel.
+   =========================================================================== */
+
+/* Der Wurzel-Teilbaum ist dunkel, `html` aber nicht: Beim Überscrollen und in
+   der Scrollleiste blitzte im Light Mode Weiß durch. Der Wert ist
+   `--ambient-base` aus `.dark` — auf `:root` gilt die Variable noch hell. */
+/* Die Anmeldeseiten folgen der Startseite, von der man dorthin kommt. */
+:root:has(.landing-root),
+:root:has(.auth-root) {
+  background-color: oklch(0.13 0 0);
+  color-scheme: dark;
+  scroll-behavior: smooth;
+}
+
+/* Der hervorgehobene Tarif: dasselbe `.glass`, nur mit dichterer Füllung und
+   einer Kante, die oben links im Logo-Blau aufleuchtet. */
+.landing-featured {
+  --glass-fill: linear-gradient(180deg, rgb(4 157 255 / 0.12), rgb(255 255 255 / 0.04));
+  --glass-rim: linear-gradient(
+    150deg,
+    rgb(203 233 255 / 0.75),
+    rgb(4 157 255 / 0.28) 30%,
+    rgb(255 255 255 / 0.05) 62%,
+    rgb(255 255 255 / 0.08) 85%,
+    rgb(4 157 255 / 0.4)
+  );
+}
+
+/* Der Tropfen in Logo-Blau: dieselbe `.liquid`-Form, nur mit anderer Füllung.
+   Gesetzt werden die Variablen, nicht `background` — so bleiben Meniskus,
+   Hover und Druckzustand von `.liquid` unverändert. */
+.liquid-brand {
+  --liquid-fill: radial-gradient(120% 100% at 50% 125%, rgb(4 22 43 / 0.2), transparent 60%),
+    linear-gradient(180deg, #45bcff, #049dff 55%, #008ef0);
+  /* Weiß wie die Untertitel-Marke; der feine Schatten trägt die Schrift
+     über das helle Blau oben im Tropfen. */
+  --liquid-fg: #fff;
+  --liquid-text-shadow: 0 1px 1.5px rgb(4 22 43 / 0.45);
+  --liquid-shadow: inset 0 1px 0 rgb(255 255 255 / 0.5), inset 0 -1px 0 rgb(4 22 43 / 0.3),
+    0 1px 2px rgb(0 0 0 / 0.4), 0 10px 28px -8px rgb(4 157 255 / 0.55);
+}
+
+/* ---------------------------------------------------------------------------
+   Scroll-Animationen
+   ---------------------------------------------------------------------------
+   Rein über CSS: `animation-timeline: view()` bindet den Fortschritt an die
+   Lage des Elements im Viewport statt an die Zeit. Kein IntersectionObserver,
+   kein Startzustand aus JS, der beim Hydrieren springt — und die Animation
+   läuft im Compositor. Beim Hochscrollen läuft sie rückwärts.
+
+   Animiert werden nur `opacity`, `translate` und `scale`: kein `filter` an
+   Elementen, die Glas enthalten (siehe `.rise-in-blur`), und die
+   Einzel-Properties statt `transform`, damit Hover-Transforms unberührt
+   bleiben. `--i` staffelt Kacheln, die gleichzeitig ins Bild kommen: Jede
+   weitere beginnt und endet ein Stück später.
+
+   Ohne Scroll-Timelines (ältere Browser) und bei „Bewegung reduzieren" steht
+   alles sofort da. Das globale Reduced-Motion-Reset oben reicht dafür nicht:
+   Es kürzt Dauern, und die zählen bei Scroll-Timelines nicht.
+   --------------------------------------------------------------------------- */
+
+@keyframes scroll-rise {
+  from { opacity: 0; translate: 0 3rem; scale: 0.97; }
+  to { opacity: 1; translate: none; scale: none; }
+}
+
+@keyframes scroll-from-left {
+  from { opacity: 0; translate: -4rem 0; scale: 0.96; }
+  to { opacity: 1; translate: none; scale: none; }
+}
+
+@keyframes scroll-from-right {
+  from { opacity: 0; translate: 4rem 0; scale: 0.96; }
+  to { opacity: 1; translate: none; scale: none; }
+}
+
+@keyframes scroll-zoom {
+  from { opacity: 0; scale: 0.9; }
+  to { opacity: 1; scale: none; }
+}
+
+/* Der Hero tritt beim Wegscrollen zurück: Die Schrift hebt ab, verblasst und
+   wird unscharf. `filter` ist hier vertretbar — darunter liegt nur die kleine
+   Plakette, und die sitzt auf einem weichen Verlauf, der unscharf gleich aussieht. */
+@keyframes hero-exit {
+  to { opacity: 0; translate: 0 -5rem; scale: 0.96; filter: blur(8px); }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    /* Der Kurzschreiber `animation` setzt `animation-timeline` zurück — die
+       Timeline muss deshalb nach ihm stehen. */
+    .scroll-rise,
+    .scroll-from-left,
+    .scroll-from-right,
+    .scroll-zoom {
+      animation: scroll-rise var(--ease-out-quint) both;
+      animation-timeline: view();
+      animation-range: entry calc(4% + var(--i, 0) * 6%) cover calc(30% + var(--i, 0) * 6%);
+    }
+
+    .scroll-from-left {
+      animation-name: scroll-from-left;
+    }
+
+    .scroll-from-right {
+      animation-name: scroll-from-right;
+    }
+
+    .scroll-zoom {
+      animation-name: scroll-zoom;
+      animation-range: entry 0% cover 45%;
+    }
+
+    /* Untereinander gestapelt kommt nichts von der Seite — das würde nur am
+       Rand abgeschnitten. */
+    @media (width < 64rem) {
+      .scroll-from-left,
+      .scroll-from-right {
+        animation-name: scroll-rise;
+      }
+    }
+
+    .hero-exit {
+      animation: hero-exit linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 75vh;
+    }
+
+    /* „Lichtsatz": Jedes Wort leuchtet auf, während der Satz durch die
+       Mitte des Fensters zieht — in Lesereihenfolge, weil `--p` (Anteil des
+       Worts am Satz, 0–1) sein Fenster auf der gemeinsamen Timeline des
+       Absatzes verschiebt. Eine Timeline für alle Wörter statt `view()` je
+       Wort: Wörter einer Zeile kämen sonst gleichzeitig. Die Bühne hält
+       dabei nicht an — große Momente hat die Seite nur zwei (Hero und
+       „So geht’s"). */
+    .statement {
+      view-timeline: --statement block;
+    }
+
+    .statement-word {
+      animation: statement-lit linear both;
+      animation-timeline: --statement;
+      animation-range: cover calc(18% + var(--p, 0) * 28%) cover calc(24% + var(--p, 0) * 28%);
+    }
+
+    /* Die Pointe weiter unten wird beim Hereinscrollen untertitelt. */
+    .caption-mark-fill[data-on='scroll'] {
+      animation: caption-fill linear both;
+      animation-timeline: view();
+      animation-range: entry 70% cover 42%;
+    }
+
+    /* Die Galerie kommt wie ein Bildschirm herein, der nach hinten gekippt
+       war, und richtet sich an ihrer Unterkante auf. Darunter wächst Licht.
+       Gleichmäßige Kurve statt `--ease-out-quint`: Die schiebt fast die
+       ganze Drehung in die ersten Pixel, und die Galerie stünde schon flat,
+       bevor man sie sieht. */
+    .scroll-tilt {
+      transform-origin: 50% 100%;
+      animation: scroll-tilt cubic-bezier(0.4, 0, 0.3, 1) both;
+      animation-timeline: view();
+      animation-range: entry 10% cover 52%;
+    }
+
+    .scroll-glow {
+      animation: scroll-glow linear both;
+      animation-timeline: view();
+      animation-range: entry 10% cover 52%;
+    }
+  }
+}
+
+@keyframes statement-lit {
+  from { opacity: 0.16; }
+  to { opacity: 1; }
+}
+
+/* ---------------------------------------------------------------------------
+   Untertitel-Marke (`CaptionMark.tsx`)
+   ---------------------------------------------------------------------------
+   Über dem hellblauen Wort liegt dasselbe Wort in einer Box aus Logo-Blau.
+   Die Box ragt seitlich etwas über das Wort hinaus; ihr Innenabstand gleicht
+   das genau aus, damit beide Schichten Buchstabe auf Buchstabe liegen. Beim
+   Aufdecken läuft `clip-path` von links nach rechts — der Untertitel „liest"
+   das Wort. Ohne Animation (reduzierte Bewegung) steht die Box einfach da.
+   --------------------------------------------------------------------------- */
+.caption-mark-fill {
+  position: absolute;
+  inset: -0.02em -0.14em -0.07em;
+  padding: 0.02em 0.14em 0;
+  border-radius: 0.14em;
+  background: var(--color-brand);
+  color: #fff;
+  white-space: nowrap;
+  clip-path: inset(0 0 0 0 round 0.14em);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .caption-mark-fill[data-on='load'] {
+    animation: caption-fill 0.75s var(--ease-out-quint) 0.6s both;
+  }
+}
+
+@keyframes caption-fill {
+  from { clip-path: inset(0 100% 0 0 round 0.14em); }
+  to { clip-path: inset(0 0 0 0 round 0.14em); }
+}
+
+/* ---------------------------------------------------------------------------
+   „So geht’s" als Film (`StepsSequence.tsx`)
+   ---------------------------------------------------------------------------
+   Nur breit, mit Scroll-Timelines und ohne „Bewegung reduzieren" — sonst
+   stehen die drei Karten (`.steps-cards`). Der Abschnitt wird hoch, die
+   Bühne klebt, und `contain` des Abschnitts ist die Zeitachse des Films:
+
+     0–11 %    Vorspann  Link tippt sich ein, „Los", Feld geht
+     11–33 %   Akt 1     Player, Tonspur und Liste; der Scan läuft (13–31),
+                         jeder Moment leuchtet auf, wenn er ihn trifft
+     33–66 %   Akt 2     9:16-Rahmen (35–39), der Clip wächst heraus (40–47),
+                         Untertitel Wort für Wort (48–57), Details daneben
+     66–100 %  Akt 3     Warteschlange (66–77), dann springt Zeile für Zeile
+                         von „Geplant" auf „Live" (80–95)
+
+   Momente tragen ihre Stelle in der Folge als `--x` (0–1): Der Scan läuft
+   über 18 % der Zeitachse, ein Moment leuchtet also bei 13 % + x · 18 %.
+
+   Positioniert wird mit `translate`/`left`, gezeigt mit `opacity`,
+   `transform` und `scale`: Elemente, die per `-translate-x-1/2` zentriert
+   sind, animieren nie `translate`. Wo ein Element erst kommt und später
+   geht, füllt das Kommen in beide Richtungen, das Gehen nur vorwärts —
+   sonst läge der Anfang des Gehens schon vor seinem Start über dem Kommen.
+   --------------------------------------------------------------------------- */
+.steps-track {
+  display: none;
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) and (min-width: 64rem) {
+    .steps-cards {
+      display: none;
+    }
+
+    /* Lang genug, dass jeder Akt viele Rasten des Mausrads bekommt — mit
+       Untergrenze in Pixeln: Nur in `vh` gerechnet wäre der Film in einem
+       niedrigen Fenster nach ein paar Wischern vorbei. */
+    .steps-track {
+      display: block;
+      height: max(480vh, 100vh + 3600px);
+      view-timeline: --steps block;
+    }
+
+    .steps-stage {
+      position: sticky;
+      top: 0;
+      display: flex;
+      height: 100vh;
+      align-items: center;
+      padding-top: 4rem;
+    }
+
+    /* Neben der Szene ist die Spalte schmal — die Überschrift eine Stufe
+       kleiner, damit sie nicht drei Zeilen frisst. */
+    .steps-stage h2 {
+      font-size: 2.75rem;
+    }
+
+    .steps-scene {
+      container-type: size;
+    }
+
+    /* Niedrige Fenster: Die Bühne muss ganz ins Bild passen, also bleiben
+       von den Schritten nur Nummer und Titel. */
+    @media (max-height: 52rem) {
+      .steps-item p {
+        display: none;
+      }
+    }
+
+    /* Die Zeitmarken: Jedes Element trägt Anfang und Ende seiner
+       Animation(en) als Prozent der Filmlänge (`--a`/`--b`, für eine zweite
+       `--a2`/`--b2`). Ohne Skript werden daraus Bereiche der Scroll-Timeline;
+       mit `SmoothScrub` (`[data-smooth]`) Verzögerung und Dauer einer
+       angehaltenen Animation von einer Sekunde — 1 % sind 10 ms —, deren
+       Zeit das Skript dem Scrollen weich nachführt. Die Liste der Elemente
+       steht genauso in `STEPS_ANIMATED` (`StepsSequence.tsx`). */
+    .steps-rail {
+      animation: steps-fill linear both;
+      --a: 0;
+      --b: 100;
+    }
+
+    .steps-item {
+      opacity: 0.3;
+      animation: steps-on linear none;
+    }
+
+    .steps-status {
+      opacity: 0;
+      animation: steps-on linear none;
+    }
+
+    .steps-typed {
+      animation: steps-type steps(30, end) both;
+      --a: 1;
+      --b: 6;
+    }
+
+    .steps-go {
+      animation: steps-press linear none;
+      --a: 6;
+      --b: 8;
+    }
+
+    .steps-intro {
+      animation: steps-leave var(--ease-out-quint) both;
+      --a: 8;
+      --b: 11;
+    }
+
+    .steps-player {
+      animation:
+        steps-enter var(--ease-out-quint) both,
+        steps-fade var(--ease-out-quint) forwards;
+      --a: 9;
+      --b: 13;
+      --a2: 42;
+      --b2: 47;
+    }
+
+    .steps-list,
+    .steps-wave {
+      animation:
+        steps-enter var(--ease-out-quint) both,
+        steps-leave var(--ease-out-quint) forwards;
+      --a: 11;
+      --b: 14;
+      --a2: 33;
+      --b2: 37;
+    }
+
+    .steps-scan {
+      animation: steps-scan linear both;
+      --a: 13;
+      --b: 31;
+    }
+
+    .steps-region,
+    .steps-found-row {
+      animation: steps-pop var(--ease-out-quint) both;
+      --a: 13 + var(--x) * 18;
+      --b: 15.5 + var(--x) * 18;
+    }
+
+    .steps-crop {
+      animation: steps-crop var(--ease-out-quint) both;
+      --a: 35;
+      --b: 39;
+    }
+
+    .steps-clip {
+      animation:
+        steps-grow-out var(--ease-out-quint) both,
+        steps-leave var(--ease-out-quint) forwards;
+      --a: 40;
+      --b: 47;
+      --a2: 63;
+      --b2: 67;
+    }
+
+    .steps-word {
+      animation: steps-speak linear none;
+      --a: 48 + var(--w) * 3;
+      --b: 51 + var(--w) * 3;
+    }
+
+    .steps-detail {
+      animation:
+        steps-enter var(--ease-out-quint) both,
+        steps-leave var(--ease-out-quint) forwards;
+      --a: 46;
+      --b: 52;
+      --a2: 63;
+      --b2: 67;
+    }
+
+    .steps-more {
+      animation: steps-pop var(--ease-out-quint) both;
+      --a: 50 + var(--i) * 1.5;
+      --b: 53 + var(--i) * 1.5;
+    }
+
+    .steps-queue {
+      animation: steps-enter var(--ease-out-quint) both;
+      --a: 66;
+      --b: 70;
+    }
+
+    .steps-row {
+      animation: steps-enter var(--ease-out-quint) both;
+      --a: 67 + var(--i) * 2;
+      --b: 71 + var(--i) * 2;
+    }
+
+    .steps-planned {
+      animation: steps-fade linear forwards;
+      --a: 80 + var(--i) * 3;
+      --b: 82 + var(--i) * 3;
+    }
+
+    .steps-live {
+      animation: steps-pop var(--ease-out-quint) both;
+      --a: 80 + var(--i) * 3;
+      --b: 82.5 + var(--i) * 3;
+    }
+
+    .steps-platforms {
+      color: rgb(255 255 255 / 0.3);
+      animation: steps-lit linear both;
+      --a: 80 + var(--i) * 3;
+      --b: 82 + var(--i) * 3;
+    }
+
+    .steps-item[data-last] {
+      animation-fill-mode: forwards;
+    }
+
+    /* Der Status in der Fensterleiste: je Akt einer, übereinander. */
+    .steps-status[data-state='0'] {
+      animation-fill-mode: backwards;
+      --a: 0;
+      --b: 33;
+    }
+
+    .steps-status[data-state='1'] {
+      --a: 33;
+      --b: 66;
+    }
+
+    .steps-status[data-state='2'] {
+      animation-fill-mode: forwards;
+      --a: 66;
+      --b: 100;
+    }
+
+    :is(
+      .steps-rail,
+      .steps-item,
+      .steps-status,
+      .steps-typed,
+      .steps-go,
+      .steps-intro,
+      .steps-player,
+      .steps-list,
+      .steps-wave,
+      .steps-scan,
+      .steps-region,
+      .steps-found-row,
+      .steps-crop,
+      .steps-clip,
+      .steps-word,
+      .steps-detail,
+      .steps-more,
+      .steps-queue,
+      .steps-row,
+      .steps-planned,
+      .steps-live,
+      .steps-platforms
+    ) {
+      animation-timeline: --steps, --steps;
+      animation-range:
+        contain calc((var(--a)) * 1%) contain calc((var(--b)) * 1%),
+        contain calc((var(--a2, 0)) * 1%) contain calc((var(--b2, 100)) * 1%);
+    }
+
+    .steps-track[data-smooth] :is(
+      .steps-rail,
+      .steps-item,
+      .steps-status,
+      .steps-typed,
+      .steps-go,
+      .steps-intro,
+      .steps-player,
+      .steps-list,
+      .steps-wave,
+      .steps-scan,
+      .steps-region,
+      .steps-found-row,
+      .steps-crop,
+      .steps-clip,
+      .steps-word,
+      .steps-detail,
+      .steps-more,
+      .steps-queue,
+      .steps-row,
+      .steps-planned,
+      .steps-live,
+      .steps-platforms
+    ) {
+      animation-timeline: auto;
+      animation-range: normal;
+      animation-play-state: paused;
+      animation-delay: calc((var(--a)) * 10ms), calc((var(--a2, 0)) * 10ms);
+      animation-duration:
+        calc(((var(--b)) - (var(--a))) * 10ms),
+        calc(((var(--b2, 100)) - (var(--a2, 0))) * 10ms);
+    }
+  }
+}
+
+@keyframes steps-fill {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+@keyframes steps-on {
+  from, to { opacity: 1; }
+}
+
+@keyframes steps-lit {
+  to { color: var(--color-brand); }
+}
+
+@keyframes steps-type {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+
+@keyframes steps-press {
+  50% { transform: scale(0.9); filter: brightness(1.25); }
+}
+
+@keyframes steps-scan {
+  from { left: 0%; opacity: 1; }
+  92% { opacity: 1; }
+  to { left: 100%; opacity: 0; }
+}
+
+@keyframes steps-enter {
+  from { opacity: 0; transform: translateY(1rem) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes steps-leave {
+  to { opacity: 0; transform: translateY(-1.5rem) scale(0.97); }
+}
+
+@keyframes steps-fade {
+  to { opacity: 0; }
+}
+
+@keyframes steps-pop {
+  from { opacity: 0; transform: scale(0.6); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Der Rahmen legt sich auf den Sprecher: Er zieht sich von außen zusammen,
+   und das Abdunkeln drumherum blendet mit ein. */
+@keyframes steps-crop {
+  from { opacity: 0; transform: scale(1.25); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Der Clip wächst aus dem Rahmen: Er beginnt genau so groß wie der
+   Ausschnitt (`--from-scale`) und an dessen Stelle (`--from-x`), dann
+   wächst er und gleitet an seinen Platz links. */
+@keyframes steps-grow-out {
+  from { opacity: 0; scale: var(--from-scale); translate: var(--from-x) 0; }
+  25% { opacity: 1; }
+  to { opacity: 1; scale: 1; translate: 0 0; }
+}
+
+/* Das gerade gesprochene Wort trägt die Untertitel-Box. */
+@keyframes steps-speak {
+  from, to { background-color: var(--color-brand); color: var(--color-brand-ink); }
+}
+
+/* ---------------------------------------------------------------------------
+   Lebendiges Licht (`PointerLight.tsx`)
+   ---------------------------------------------------------------------------
+   Im Produkt steht das Licht auf Glas bewusst fest oben links (siehe
+   `.glass::before`). Auf der Landing-Page antwortet es dem Zeiger: Unter ihm
+   liegt ein weicher Fleck in Logo-Blau, und die Kante leuchtet dort auf, wo
+   er ihr nahe kommt. `--lit` blendet beides ein und aus — registriert, damit
+   es sich überblenden lässt; Pseudo-Elemente erben es von der Fläche.
+   Nur `main`: Das Glas der Kopfleiste blendet selbst per `opacity` ein, eine
+   `transition` hier nähme ihm diese Überblendung.
+   --------------------------------------------------------------------------- */
+
+@property --lit {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  /* `.glass-interactive` bringt eigene Übergänge mit; sie stehen hier mit,
+     weil `transition` sie sonst ersetzen würde. */
+  .landing-root main :is(.glass, .glass-tile) {
+    transition: --lit 500ms var(--ease-out-quint), box-shadow 300ms var(--ease-out-quint),
+      transform 550ms var(--ease-spring);
+  }
+
+  .landing-root main :is(.glass, .glass-tile)[data-lit] {
+    --lit: 1;
+  }
+
+  /* `z-index: -1` in der isolierten Fläche: über ihrer Füllung, unter ihrem
+     Inhalt. */
+  .landing-root main :is(.glass, .glass-tile)::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(
+      26rem circle at var(--mx, 50%) var(--my, 50%),
+      rgb(4 157 255 / calc(0.12 * var(--lit))),
+      transparent 70%
+    );
+  }
+
+  .landing-root main .glass::before {
+    background:
+      radial-gradient(
+        13rem circle at var(--mx, 50%) var(--my, 50%),
+        rgb(170 212 255 / calc(0.9 * var(--lit))),
+        transparent 70%
+      ),
+      var(--glass-rim);
+  }
+
+  .landing-root main .glass-tile::before {
+    background:
+      radial-gradient(
+        13rem circle at var(--mx, 50%) var(--my, 50%),
+        rgb(170 212 255 / calc(0.9 * var(--lit))),
+        transparent 70%
+      ),
+      var(--glass-tile-rim, var(--glass-rim));
+  }
+
+  /* Das große Licht im Hero zieht dem Zeiger träge nach — die Trägheit
+     macht es zu Licht statt zu einem Cursor. */
+  .hero-light {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 46rem;
+    height: 46rem;
+    margin: -23rem 0 0 -23rem;
+    border-radius: 9999px;
+    background: radial-gradient(
+      closest-side,
+      rgb(4 157 255 / 0.16),
+      rgb(0 128 230 / 0.06) 55%,
+      transparent
+    );
+    translate: var(--hx, 50vw) var(--hy, 20rem);
+    opacity: 0;
+    transition: translate 1.8s var(--ease-out-quint), opacity 900ms var(--ease-out-quint);
+  }
+
+  [data-hero-light][data-pointer] .hero-light {
+    opacity: 1;
+  }
+
+  /* Glanz, der beim Überfahren einmal über den blauen Tropfen läuft. Der
+     Rückweg hat keinen Übergang — er springt unsichtbar zurück. */
+  .landing-root .liquid-brand {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .landing-root .liquid-brand::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / 0.6) 50%, transparent 65%);
+    translate: -120% 0;
+    pointer-events: none;
+  }
+
+  .landing-root :is(.liquid-brand:hover, .group:hover .liquid-brand)::after {
+    translate: 120% 0;
+    transition: translate 900ms var(--ease-out-quint);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-light,
+  .landing-root .liquid-brand::after {
+    display: none;
+  }
+}
+
+/* Beispiel-Galerie: ein Band fertiger Shorts, das endlos nach links läuft.
+   Die Liste steht zweimal darin, -50 % ist also genau eine Länge. Wer auf
+   eine Karte zeigt, will sie ansehen — dann hält das Band an. */
+@keyframes gallery-marquee {
+  to { transform: translateX(-50%); }
+}
+
+.gallery-track {
+  animation: gallery-marquee 70s linear infinite;
+}
+
+.gallery-band:hover .gallery-track,
+.gallery-band:focus-within .gallery-track {
+  animation-play-state: paused;
+}
+
+/* Das gesprochene Wort wandert durch eine Zeile aus zwei bis vier Wörtern —
+   im Untertitel als Farbe und Pop, im Transkript als helle Markierung. Die
+   Farben kommen per Variable aus der Vorlage; Takt und Versatz setzt
+   `spokenWord()` inline. Die harten Stopps machen daraus einen Sprung statt
+   einer Überblendung, so wie im gerenderten Clip. */
+@keyframes spoken-2 {
+  0%, 49.9% { color: var(--hot); background-color: var(--hot-bg, transparent); transform: scale(var(--pop, 1.06)); }
+  50%, 100% { color: var(--base); background-color: transparent; transform: none; }
+}
+
+@keyframes spoken-3 {
+  0%, 33.2% { color: var(--hot); background-color: var(--hot-bg, transparent); transform: scale(var(--pop, 1.06)); }
+  33.3%, 100% { color: var(--base); background-color: transparent; transform: none; }
+}
+
+@keyframes spoken-4 {
+  0%, 24.9% { color: var(--hot); background-color: var(--hot-bg, transparent); transform: scale(var(--pop, 1.06)); }
+  25%, 100% { color: var(--base); background-color: transparent; transform: none; }
+}
+
+.spoken {
+  display: inline-block;
+  color: var(--base);
+}
+
+/* Ohne Bewegung bleibt jede Zeile auf ihrem ersten Wort stehen, das Band
+   lässt sich von Hand scrollen. */
+@media (prefers-reduced-motion: reduce) {
+  .gallery-track {
+    animation: none;
+  }
+
+  .gallery-band {
+    overflow-x: auto;
+  }
+
+  .spoken {
+    animation-play-state: paused !important;
+  }
+}
+
+/* ===========================================================================
+   Hero: Filmstreifen in den Himmel (`SkyFilmStrip.tsx`)
+   ---------------------------------------------------------------------------
+   Das Band zeichnet die Komponente auf ein Canvas, Geometrie und Tempo
+   stehen dort. Hier nur die Bühne: so hoch wie der erste Bildschirm, hinter
+   dem Text, ohne Zeiger. Die Quell-Videos liegen unsichtbar klein darin.
+   --------------------------------------------------------------------------- */
+
+.sky-film {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 100svh;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.sky-film canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.sky-film-sources {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 2px;
+  overflow: hidden;
+  opacity: 0.01;
+}
+
+.sky-film-sources video {
+  width: 2px;
+  height: 2px;
+}
+
+/* Neben dem Text ist erst ab 75rem Platz für die Spirale; ohne Bewegung
+   fällt das Band weg wie das Hintergrundvideo. Die Komponente fragt dieselbe
+   Bedingung ab. */
+@media (width < 75rem), (prefers-reduced-motion: reduce) {
+  .sky-film {
+    display: none;
+  }
+}
+
+/* ===========================================================================
+   Hilfe (`SupportWidget.tsx`)
+   ---------------------------------------------------------------------------
+   Ein Tropfen, der sich beim Überfahren zur Pille dehnt und beim Öffnen zum
+   Fenster aufgeht — eine Fläche, die wächst, kein zweites Element, das
+   daneben aufpoppt. Das Fenster liegt in voller Größe darin, unten rechts
+   verankert; die wachsende Fläche legt es frei. Breite und Höhe sind
+   Längen (auch `min()` ist eine), der Browser interpoliert also zwischen
+   ihnen.
+   =========================================================================== */
+
+.support-shell {
+  --support-w: min(24rem, calc(100vw - 1.5rem));
+  --support-h: min(38rem, calc(100dvh - 1.5rem));
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 1.625rem;
+  /* Zu: zügig und ohne Nachfedern, die Höhe zuerst. */
+  transition:
+    width 380ms var(--ease-out-quint) 50ms,
+    height 340ms var(--ease-out-quint),
+    border-radius 380ms var(--ease-out-quint);
+}
+
+@media (min-width: 40rem) {
+  .support-shell {
+    --support-w: min(24rem, calc(100vw - 3rem));
+    --support-h: min(38rem, calc(100dvh - 3rem));
+  }
+}
+
+/* Auf: Breite vor Höhe, beide schwappen leicht über — ein Tropfen, der
+   zerläuft, kein Fenster, das aufklappt. */
+.support-shell[data-open] {
+  width: var(--support-w);
+  height: var(--support-h);
+  border-radius: 1.75rem;
+  transition:
+    width 520ms cubic-bezier(0.32, 1.25, 0.5, 1),
+    height 640ms cubic-bezier(0.32, 1.2, 0.5, 1) 40ms,
+    border-radius 520ms var(--ease-out-quint);
+}
+
+/* Der Tropfen löst sich im Glas auf, und kommt beim Schließen zurück. */
+.support-drop {
+  transition: opacity 260ms var(--ease-out-quint) 140ms;
+}
+
+.support-shell[data-open] .support-drop {
+  opacity: 0;
+  transition: opacity 240ms var(--ease-out-quint);
+}
+
+.support-launch {
+  transition: opacity 220ms var(--ease-out-quint) 160ms;
+}
+
+.support-shell[data-open] .support-launch {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 100ms var(--ease-out-quint);
+}
+
+.support-label {
+  opacity: 0;
+  translate: 0.5rem 0;
+  transition: opacity 200ms var(--ease-out-quint), translate 400ms var(--ease-out-quint);
+}
+
+.support-panel {
+  width: var(--support-w);
+  height: var(--support-h);
+  opacity: 0;
+  translate: 0 0.75rem;
+  pointer-events: none;
+  transition: opacity 120ms var(--ease-out-quint), translate 200ms var(--ease-out-quint);
+}
+
+.support-shell[data-open] .support-panel {
+  opacity: 1;
+  translate: 0 0;
+  pointer-events: auto;
+  transition: opacity 320ms var(--ease-out-quint) 160ms, translate 600ms var(--ease-out-quint) 120ms;
+}
+
+/* Pille: beim Überfahren und beim Tastaturfokus steht „Hilfe“ neben dem Zeichen. */
+@media (hover: hover) and (pointer: fine) {
+  .support-shell:not([data-open]):hover {
+    width: 6.25rem;
+    transition: width 550ms var(--ease-spring), height 340ms var(--ease-out-quint), border-radius 380ms var(--ease-out-quint);
+  }
+
+  .support-shell:not([data-open]):hover .support-label {
+    opacity: 1;
+    translate: 0 0;
+    transition-delay: 80ms;
+  }
+
+  .support-shell:not([data-open]):hover .support-glyph-bar {
+    animation: support-level 800ms ease-in-out infinite;
+  }
+}
+
+.support-shell:not([data-open]):has(.support-launch:focus-visible) {
+  width: 6.25rem;
+}
+
+.support-shell:not([data-open]):has(.support-launch:focus-visible) .support-label {
+  opacity: 1;
+  translate: 0 0;
+}
+
+/* Tonspur-Pegel: im Zeichen und in „Clyp sucht die Antwort“. */
+@keyframes support-level {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.4); }
+}
+
+.support-bar,
+.support-glyph-bar {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.support-bar,
+.support-shell[data-busy] .support-glyph-bar {
+  animation: support-level 900ms ease-in-out infinite;
+}
+
+/* Antworten laufen ein wie Untertitel: Wort für Wort, jedes kurz in Blau. */
+@keyframes support-word {
+  from { opacity: 0; translate: 0 0.35em; filter: blur(3px); color: var(--primary); }
+  45% { color: var(--primary); }
+  to { opacity: 1; translate: 0 0; filter: blur(0); }
+}
+
+.support-word {
+  display: inline-block;
+  animation: support-word 520ms var(--ease-out-quint) both;
+}
+
+@keyframes support-rise {
+  from { opacity: 0; translate: 0 0.6rem; }
+}
+
+.support-rise {
+  animation: support-rise 600ms var(--ease-out-quint) var(--rise-delay, 0ms) both;
+}
+
+@keyframes support-send {
+  from { opacity: 0; scale: 0.92; translate: 0 0.4rem; }
+}
+
+.support-send {
+  transform-origin: bottom right;
+  animation: support-send 420ms var(--ease-spring) both;
+}
+
+@keyframes support-pop {
+  from { opacity: 0; scale: 0.6; translate: 0 0.5rem; }
+}
+
+.support-pop {
+  transform-origin: bottom right;
+  animation: support-pop 520ms var(--ease-spring) both;
+}
+
+/* Meldungen unten rechts weichen dem Tropfen aus. Sonner setzt den Abstand
+   inline, deshalb `!important`. */
+body:has(.support-shell) [data-sonner-toaster][data-y-position='bottom'][data-x-position='right'] {
+  --offset-bottom: 5.5rem !important;
+  --mobile-offset-bottom: 4.75rem !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .support-word,
+  .support-rise,
+  .support-send,
+  .support-pop,
+  .support-bar,
+  .support-shell .support-glyph-bar {
+    animation: none !important;
   }
 }

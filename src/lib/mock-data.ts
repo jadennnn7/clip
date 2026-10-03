@@ -7,6 +7,7 @@ import type {
 } from '@/types/database'
 import type { WaveformData } from '@/types/editor'
 import { CAPTION_PRESETS } from '../../remotion/captions/presets'
+import { createHookOverlay } from './hook-title'
 
 /**
  * Mock-Daten für Phase 1.
@@ -200,6 +201,8 @@ export const mockClips: Clip[] = seeds.map((seed) => ({
   // Timestamps sind auf den Clip-Start normalisiert (0 = erster Frame).
   words: buildWords(seed.transcript, 0),
   caption_style: CAPTION_PRESETS[seed.preset],
+  // Feste ID: Die Landing-Page rendert den Beispielclip auch auf dem Server.
+  overlays: [createHookOverlay(seed.hook, seed.end - seed.start, undefined, `hook-${seed.id}`)],
   crop_keyframes: [
     { frame: 0, x: 0.5, y: 0.42, scale: 1 },
     { frame: 120, x: 0.44, y: 0.42, scale: 1.08 },
@@ -355,9 +358,3 @@ export const mockQueue: QueueEntry[] = [
     status: 'failed',
   },
 ]
-
-/** Guthaben des angemeldeten Nutzers (Phase 2: aus `profiles`). */
-export const mockUsage = {
-  renderMinutesUsed: 38.4,
-  renderMinutesLimit: 120,
-}

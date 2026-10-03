@@ -4,6 +4,7 @@ import { ClipComposition } from './ClipComposition'
 import { COMPOSITION_HEIGHT, COMPOSITION_WIDTH, FPS } from '@/types/editor'
 import { DEFAULT_CAPTION_STYLE } from './captions/presets'
 import { MOCK_VIDEO_SRC, mockClips } from '@/lib/mock-data'
+import { compositionDurationInFrames } from './timing'
 
 const preview = mockClips[0]
 
@@ -32,14 +33,12 @@ export const RemotionRoot: React.FC = () => {
         cropKeyframes: preview.crop_keyframes,
         sourceWidth: 1920,
         sourceHeight: 1080,
+        overlays: preview.overlays,
       }}
-      // Die Cliplänge ist pro Render unterschiedlich, deshalb wird sie aus den
-      // Props abgeleitet statt fest verdrahtet.
+      // Die Cliplänge ist pro Render unterschiedlich — und nach Schnitten
+      // kürzer als das Fenster im Quellvideo. Deshalb aus den Props abgeleitet.
       calculateMetadata={({ props }) => ({
-        durationInFrames: Math.max(
-          1,
-          Math.round((props.endSeconds - props.startSeconds) * FPS),
-        ),
+        durationInFrames: compositionDurationInFrames(props, FPS),
       })}
     />
   )

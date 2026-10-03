@@ -1,4 +1,4 @@
-import type { CaptionStyle, Clip, CropKeyframe, TranscriptWord } from './database'
+import type { CaptionStyle, Clip, ClipSegment, CropKeyframe, Overlay, TranscriptWord, VideoSettings } from './database'
 
 /** Feste Bildrate der Pipeline. Timeline, Remotion und Trim rechnen alle damit. */
 export const FPS = 30
@@ -24,16 +24,36 @@ export type ClipCompositionProps = {
   /** Startzeit im QUELLVIDEO in Sekunden. */
   startSeconds: number
   endSeconds: number
-  /** Timestamps relativ zum Clip-Start (0 = erster Frame des Clips). */
+  /**
+   * Untertitelwörter auf der AUSGABE-Zeitachse (nach allen Schnitten,
+   * 0 = erster Frame des fertigen Clips). Die Umrechnung macht der Editor.
+   */
   words: TranscriptWord[]
   captionStyle: CaptionStyle
   cropKeyframes: CropKeyframe[]
   /** Seitenverhältnis der Quelle, für die Berechnung des Ausschnitts. */
   sourceWidth: number
   sourceHeight: number
+  /**
+   * Behaltene Abschnitte, Sekunden ab Clip-Start. Fehlt bei Renders, die vor
+   * dem Schnitt-Editor gestartet wurden — dann läuft der Clip am Stück.
+   */
+  segments?: ClipSegment[] | null
+  overlays?: Overlay[]
+  video?: VideoSettings | null
+  /**
+   * Clyp-Wasserzeichen im Gratis-Tarif. Beim Export entscheidet der Server
+   * (`needsWatermark`), nie der Browser.
+   */
+  watermark?: boolean
+  /**
+   * Mit Wasserzeichen hängt ein schwarzer Abspann „Made with Clyp" am Clip
+   * (`OUTRO_SECONDS`). `false` nur im Editor: Dessen Timeline endet am Clip.
+   */
+  outro?: boolean
 }
 
-/** Ein Wort, das aus dem Clip herausgeschnitten wurde (Backspace im Transkript). */
+/** Im Untertitel ausgeblendete Wörter; verändert weder Audio noch Videoschnitt. */
 export type WordCutSet = Set<number>
 
 /** Die undo-fähige Teilmenge des Editor-States. */

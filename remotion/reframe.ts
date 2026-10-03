@@ -29,6 +29,9 @@ export function getCropTransform({
   sourceHeight,
   compositionWidth,
   compositionHeight,
+  zoom = 1,
+  offsetX = 0,
+  offsetY = 0,
 }: {
   frame: number
   keyframes: CropKeyframe[]
@@ -36,11 +39,20 @@ export function getCropTransform({
   sourceHeight: number
   compositionWidth: number
   compositionHeight: number
+  /** Zusätzlicher Zoom aus dem Editor, multipliziert mit dem der Kamerafahrt. */
+  zoom?: number
+  /** Manuelle Verschiebung, -1..1; ±1 schiebt den Mittelpunkt um eine halbe Bildbreite. */
+  offsetX?: number
+  offsetY?: number
 }): CropTransform {
-  const { x, y, scale } = interpolateKeyframes(frame, keyframes)
+  const keyframe = interpolateKeyframes(frame, keyframes)
+  const x = keyframe.x + offsetX * 0.5
+  const y = keyframe.y + offsetY * 0.5
+  const scale = Math.max(1, keyframe.scale) * Math.max(1, zoom)
 
-  const displayHeight = compositionHeight * scale
-  const displayWidth = displayHeight * (sourceWidth / sourceHeight)
+  const coverScale = Math.max(compositionWidth / sourceWidth, compositionHeight / sourceHeight)
+  const displayHeight = sourceHeight * coverScale * scale
+  const displayWidth = sourceWidth * coverScale * scale
 
   const rawLeft = compositionWidth / 2 - x * displayWidth
   const rawTop = compositionHeight / 2 - y * displayHeight

@@ -1,4 +1,15 @@
-import { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { createReadStream } from 'node:fs'
+import {
+  S3Client,
+  GetObjectCommand,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  DeleteObjectsCommand,
+  HeadBucketCommand,
+  HeadObjectCommand,
+  ListObjectsV2Command,
+} from '@aws-sdk/client-s3'
+import { Upload } from '@aws-sdk/lib-storage'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 
 /**
@@ -12,6 +23,10 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
  */
 
 let client: S3Client | null = null
+
+export function isR2Configured(): boolean {
+  return Boolean(process.env.R2_ACCOUNT_ID && process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY)
+}
 
 export function getR2Client(): S3Client {
   if (client) return client
@@ -35,6 +50,25 @@ export function getR2Client(): S3Client {
 
 function bucket() {
   return process.env.R2_BUCKET ?? 'omegaclip'
+}
+
+export function r2BucketName(): string {
+  return bucket()
+}
+
+/** Eine Anfrage: Zugangsdaten gültig, Bucket vorhanden, Endpunkt erreichbar. */
+export async function headBucket(): Promise<void> {
+  await getR2Client().send(new HeadBucketCommand({ Bucket: bucket() }))
+}
+
+/**
+ * Prüft, ob der Token schreiben darf — `headBucket` reicht dafür nicht, ein
+ * Nur-Lese-Token besteht ihn. Schreibt immer dieselbe 2-Byte-Datei.
+ */
+export async function probeBucketWrite(): Promise<void> {
+  await getR2Client().send(new PutObjectCommand({
+    Bucket: bucket(), Key: 'healthcheck/write-test.txt', Body: 'ok', ContentType: 'text/plain',
+  }))
 }
 
 /**
@@ -64,6 +98,22 @@ export const r2Keys = {
     `thumbnails/${userId}/${clipId}/thumb.jpg`,
 } as const
 
+/**
+ * Keys der Link-Pipeline und der Renders im Cloud-Modus.
+ *
+ * Ohne Supabase-Auth gibt es noch keine `user_id` — Projekte leben im lokalen
+ * Workspace des Browsers. Die Keys hängen deshalb an Job-, Projekt- und
+ * Render-IDs; sobald Accounts dazukommen, wandert der `user_id`-Präfix davor.
+ */
+export const workspaceKeys = {
+  /** Alles eines Pipeline-Jobs liegt unter diesem Präfix. */
+  job: (jobId: string) => `pipeline/${jobId}/`,
+  proxy: (jobId: string) => `pipeline/${jobId}/proxy.mp4`,
+  thumbnail: (jobId: string, index: number) => `pipeline/${jobId}/thumbs/${index}.jpg`,
+  upload: (projectId: string) => `uploads/${projectId}/source`,
+  render: (renderId: string) => `renders/${renderId}/clip.mp4`,
+} as const
+
 /** Presigned URL zum Lesen. Default 1 Stunde. */
 export async function getDownloadUrl(key: string, expiresIn = 3600): Promise<string> {
   return getSignedUrl(
@@ -88,6 +138,58 @@ export async function getUploadUrl(
 
 export async function deleteObject(key: string): Promise<void> {
   await getR2Client().send(new DeleteObjectCommand({ Bucket: bucket(), Key: key }))
+}
+
+/** Presigned Download-URL, die der Browser als Datei speichert statt abzuspielen. */
+export async function getAttachmentUrl(key: string, filename: string, expiresIn = 3600): Promise<string> {
+  const ascii = filename.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '')
+  return getSignedUrl(
+    getR2Client(),
+    new GetObjectCommand({
+      Bucket: bucket(),
+      Key: key,
+      ResponseContentDisposition: `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
+    }),
+    { expiresIn },
+  )
+}
+
+export async function objectExists(key: string): Promise<boolean> {
+  try {
+    await getR2Client().send(new HeadObjectCommand({ Bucket: bucket(), Key: key }))
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Lädt eine lokale Datei hoch — als Multipart, weil ein Proxy einer
+ * einstündigen Quelle schnell ein Gigabyte groß ist.
+ */
+export async function uploadFile(key: string, file: string, contentType: string): Promise<void> {
+  await new Upload({
+    client: getR2Client(),
+    params: { Bucket: bucket(), Key: key, Body: createReadStream(file), ContentType: contentType },
+    partSize: 16 * 1024 * 1024,
+    queueSize: 4,
+  }).done()
+}
+
+/** Löscht alle Objekte unter einem Präfix (bis zu 1.000 pro Durchgang). */
+export async function deletePrefix(prefix: string): Promise<void> {
+  const client = getR2Client()
+  let token: string | undefined
+  do {
+    const page = await client.send(new ListObjectsV2Command({ Bucket: bucket(), Prefix: prefix, ContinuationToken: token }))
+    const keys = (page.Contents ?? []).flatMap((object) => (object.Key ? [{ Key: object.Key }] : []))
+    if (keys.length > 0) {
+      // DeleteObjects meldet einzelne Fehlschläge in der Antwort, nicht als Ausnahme.
+      const result = await client.send(new DeleteObjectsCommand({ Bucket: bucket(), Delete: { Objects: keys } }))
+      if (result.Errors?.length) throw new Error(`${result.Errors.length} Dateien unter ${prefix} konnten nicht gelöscht werden.`)
+    }
+    token = page.IsTruncated ? page.NextContinuationToken : undefined
+  } while (token)
 }
 
 /**

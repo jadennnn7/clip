@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type CSSProperties, type FormEvent, type KeyboardEvent } from 'react'
 import Image from 'next/image'
+import { LOGO } from '@/lib/logo'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ArrowRight, ArrowUp, ChevronDown, Mail, Square, SquarePen, X } from 'lucide-react'
@@ -29,12 +30,12 @@ const TOPICS: { path: string; exact?: boolean; label: string; questions: string[
     path: '/dashboard',
     exact: true,
     label: 'Übersicht',
-    questions: ['Wie starte ich mein erstes Video?', 'Was kostet ein 60-Minuten-Video?', 'Wie bewertet Clyp die Clips?'],
+    questions: ['Wie starte ich mein erstes Video?', 'Was kostet ein 60-Minuten-Video?', 'Wie bewertet Ocuris die Clips?'],
   },
   {
     path: '/dashboard/clips',
     label: 'Clips',
-    questions: ['Wie bewertet Clyp die Clips?', 'Wie ändere ich die Untertitel?', 'Wie schneide ich über das Transkript?'],
+    questions: ['Wie bewertet Ocuris die Clips?', 'Wie ändere ich die Untertitel?', 'Wie schneide ich über das Transkript?'],
   },
   {
     path: '/dashboard/connections',
@@ -59,7 +60,7 @@ const TOPICS: { path: string; exact?: boolean; label: string; questions: string[
 ]
 
 const GENERAL = {
-  label: 'Clyp',
+  label: 'Ocuris',
   questions: ['Wie starte ich mein erstes Video?', 'Was kostet ein Clip?', 'Wie verbinde ich TikTok?'],
 }
 
@@ -120,7 +121,7 @@ function Reveal({ text }: { text: string }) {
 }
 
 /** Das Logo im Glaskreis — Absender jeder Antwort. */
-function ClypAvatar({ size = 'sm', className }: { size?: 'sm' | 'lg'; className?: string }) {
+function OcurisAvatar({ size = 'sm', className }: { size?: 'sm' | 'lg'; className?: string }) {
   return (
     <span
       aria-hidden
@@ -133,13 +134,13 @@ function ClypAvatar({ size = 'sm', className }: { size?: 'sm' | 'lg'; className?
       {/* Die PNG hat viel Rand: beschnittener Rahmen + `scale`, wie in `AppSidebar`.
           Dieselbe Größe wie dort, damit das Bild schon im Cache liegt. */}
       <span className={cn('relative overflow-hidden', size === 'lg' ? 'size-6' : 'size-4')}>
-        <Image src="/Logo.png" alt="" width={28} height={28} loading="eager" className="size-full scale-[1.45] object-contain" />
+        <Image src={LOGO} alt="" width={28} height={28} loading="eager" className="size-full scale-[1.45] object-contain" />
       </span>
     </span>
   )
 }
 
-/** Fünf Pegel einer Tonspur — „Clyp denkt“, im Chat und im geschlossenen Knopf. */
+/** Fünf Pegel einer Tonspur — „Ocuris denkt“, im Chat und im geschlossenen Knopf. */
 function Waveform({ className }: { className?: string }) {
   return (
     <span aria-hidden className={cn('flex h-3.5 items-center gap-[3px]', className)}>
@@ -160,7 +161,7 @@ function Waveform({ className }: { className?: string }) {
  * Geschlossen ein Tropfen in Logo-Blau, beim Überfahren dehnt er sich zur
  * Pille, beim Klick geht er zum Fenster auf — dieselbe Fläche, nur größer
  * (`.support-shell` in globals.css). Im Fenster beantwortet die KI Fragen zu
- * Clyp (`/api/assistant`); die Vorschläge passen zur Seite, auf der man ist.
+ * Ocuris (`/api/assistant`); die Vorschläge passen zur Seite, auf der man ist.
  * Kommt eine Antwort, während das Fenster zu ist, zeigt der Tropfen sie an.
  *
  * Nutzt nur Theme-Tokens. Die Clip-Seite eines Projekts ist immer dunkel
@@ -332,9 +333,9 @@ export function SupportWidget({ firstName }: { firstName?: string | null }) {
             onClick={openPanel}
             className="flex w-full items-start gap-2.5 rounded-[inherit] p-3 pr-8 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <ClypAvatar />
+            <OcurisAvatar />
             <span className="min-w-0">
-              <span className="block text-xs font-semibold">Clyp hat geantwortet</span>
+              <span className="block text-xs font-semibold">Ocuris hat geantwortet</span>
               <span className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{unread}</span>
             </span>
           </button>
@@ -364,7 +365,7 @@ export function SupportWidget({ firstName }: { firstName?: string | null }) {
           className="support-launch absolute inset-0 flex items-center justify-end gap-2 rounded-[inherit] pr-[0.9375rem] text-[var(--liquid-fg)] outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           <span className="support-label font-display text-sm font-semibold whitespace-nowrap">Hilfe</span>
-          {/* Sprechblase mit Tonspur: Fragen an Clyp. Die Pegel federn beim
+          {/* Sprechblase mit Tonspur: Fragen an Ocuris. Die Pegel federn beim
               Überfahren und solange eine Antwort entsteht. */}
           <svg viewBox="0 0 24 24" className="size-[22px] shrink-0" fill="none" aria-hidden>
             <path
@@ -411,11 +412,11 @@ export function SupportWidget({ firstName }: { firstName?: string | null }) {
 
           <header className="relative flex items-center gap-3 px-4 pt-4 pb-3">
             <span className="relative">
-              <ClypAvatar size="lg" />
+              <OcurisAvatar size="lg" />
               <span className="absolute -right-0.5 -bottom-0.5 size-3 rounded-full bg-emerald-500 ring-[2.5px] ring-[var(--glass-menu)]" aria-hidden />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="font-display text-[15px] leading-tight font-semibold tracking-tight">Clyp Hilfe</p>
+              <p className="font-display text-[15px] leading-tight font-semibold tracking-tight">Ocuris Hilfe</p>
               <p className="mt-0.5 truncate text-[11px] text-muted-foreground">KI-Assistent · antwortet in Sekunden</p>
             </div>
             {messages.length ? (
@@ -502,7 +503,7 @@ export function SupportWidget({ firstName }: { firstName?: string | null }) {
                   const revealing = index === fresh && open
                   return (
                     <li key={index} ref={isLast ? lastItem : undefined} className="flex gap-2.5">
-                      <ClypAvatar className="mt-px" />
+                      <OcurisAvatar className="mt-px" />
                       <div className="min-w-0 flex-1 pt-0.5 text-[13px] leading-relaxed break-words whitespace-pre-line">
                         {revealing ? <Reveal text={message.text} /> : message.text}
                         {message.links?.length ? (
@@ -528,11 +529,11 @@ export function SupportWidget({ firstName }: { firstName?: string | null }) {
                   )
                 })}
                 {pending ? (
-                  <li className="support-rise flex items-center gap-2.5" aria-label="Clyp schreibt">
-                    <ClypAvatar />
+                  <li className="support-rise flex items-center gap-2.5" aria-label="Ocuris schreibt">
+                    <OcurisAvatar />
                     <span className="flex items-center gap-2.5 rounded-full bg-foreground/[0.05] py-2 pr-3.5 pl-3 ring-1 ring-foreground/[0.06]">
                       <Waveform />
-                      <span className="text-shimmer text-xs">Clyp sucht die Antwort …</span>
+                      <span className="text-shimmer text-xs">Ocuris sucht die Antwort …</span>
                     </span>
                   </li>
                 ) : null}
@@ -559,7 +560,7 @@ export function SupportWidget({ firstName }: { firstName?: string | null }) {
                 maxLength={ASSISTANT_MESSAGE_MAX_LENGTH}
                 onChange={(event) => setDraft(event.target.value)}
                 onKeyDown={onComposerKeyDown}
-                placeholder="Frag etwas zu Clyp …"
+                placeholder="Frag etwas zu Ocuris …"
                 aria-label="Deine Frage"
                 className="max-h-28 min-h-8 flex-1 resize-none bg-transparent py-1.5 text-[13px] leading-5 outline-none [field-sizing:content] placeholder:text-muted-foreground"
               />

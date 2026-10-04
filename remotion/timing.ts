@@ -57,7 +57,7 @@ export function contentDurationInFrames(
   return Math.max(1, last.from + last.durationInFrames)
 }
 
-/** Der schwarze Abspann „Made with Clyp" im Gratis-Tarif, hinter dem Clip. */
+/** Der schwarze Abspann „Made with Ocuris" im Gratis-Tarif, hinter dem Clip. */
 export const OUTRO_SECONDS = 2
 
 /** Frames des Abspanns; 0 ohne Wasserzeichen oder mit `outro: false` (Editor). */

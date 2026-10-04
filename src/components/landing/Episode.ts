@@ -6,7 +6,7 @@
  */
 
 /**
- * Standbild aus einem echten Clyp-Clip, 9:16: der Talkshow-Clip der Galerie,
+ * Standbild aus einem echten Ocuris-Clip, 9:16: der Talkshow-Clip der Galerie,
  * an einer Stelle ohne eingebrannten Untertitel — die Kacheln unter
  * „Funktionen" legen ihre eigenen Untertitel und Hook-Titel darüber.
  */

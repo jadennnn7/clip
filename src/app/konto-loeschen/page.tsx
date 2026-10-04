@@ -5,8 +5,8 @@ import { BrandMark } from '@/components/landing/BrandMark'
 import { buttonVariants } from '@/components/ui/button'
 
 export const metadata: Metadata = {
-  title: 'Konto und Daten löschen — Clyp',
-  description: 'So löschst du dein Clyp-Konto mit allen Daten — und so trennst du Instagram, YouTube oder TikTok.',
+  title: 'Konto und Daten löschen — Ocuris',
+  description: 'So löschst du dein Ocuris-Konto mit allen Daten — und so trennst du Instagram, YouTube oder TikTok.',
 }
 
 /**
@@ -32,20 +32,20 @@ export default async function DeleteAccountInfoPage({ searchParams }: { searchPa
           <div role="status" className="mt-10 rounded-xl bg-card p-4 text-sm ring-1 ring-foreground/10">
             <p className="font-medium">Dein Konto ist gelöscht.</p>
             <p className="mt-1 text-pretty text-muted-foreground">
-              Alle Daten dazu sind entfernt, und ein laufendes Abo ist beendet. Danke, dass du Clyp ausprobiert hast.
+              Alle Daten dazu sind entfernt, und ein laufendes Abo ist beendet. Danke, dass du Ocuris ausprobiert hast.
             </p>
           </div>
         ) : null}
 
         <h1 className="mt-10 font-display text-3xl font-semibold tracking-tight text-balance">Konto und Daten löschen</h1>
         <p className="mt-3 text-base leading-relaxed text-pretty text-muted-foreground">
-          Du kannst dein Clyp-Konto jederzeit selbst löschen. Wir entfernen dann sofort und endgültig alle Daten, die wir
+          Du kannst dein Ocuris-Konto jederzeit selbst löschen. Wir entfernen dann sofort und endgültig alle Daten, die wir
           zu dir gespeichert haben.
         </p>
 
         <Section title="So löschst du dein Konto">
           <ol className="list-decimal space-y-2 pl-5">
-            <li>Melde dich bei Clyp an.</li>
+            <li>Melde dich bei Ocuris an.</li>
             <li>Öffne in der Seitenleiste „Konto & Daten“ — oder unten links dein Profil und dort „Konto & Daten“.</li>
             <li>Wähle „Konto löschen“ und bestätige mit deiner E-Mail-Adresse.</li>
           </ol>
@@ -82,14 +82,14 @@ export default async function DeleteAccountInfoPage({ searchParams }: { searchPa
             <li>
               Videos, die du in einem Browser hochgeladen hast, liegen dort zusätzlich im Speicher des Browsers. Auf dem
               Gerät, auf dem du dein Konto löschst, entfernen wir sie mit; auf anderen Geräten löschst du die Websitedaten
-              von Clyp im Browser.
+              von Ocuris im Browser.
             </li>
           </ul>
         </Section>
 
         <Section title="Nur Instagram, YouTube oder TikTok trennen">
           <p>
-            In Clyp unter „Kanäle“ beim Kanal auf „Verbindung trennen“: Clyp verliert sofort den Zugriff, und die
+            In Ocuris unter „Kanäle“ beim Kanal auf „Verbindung trennen“: Ocuris verliert sofort den Zugriff, und die
             gespeicherten Zugangsdaten werden gelöscht.
           </p>
           <p className="mt-3">
@@ -98,16 +98,16 @@ export default async function DeleteAccountInfoPage({ searchParams }: { searchPa
             <a href="https://myaccount.google.com/permissions" className="underline underline-offset-4 hover:no-underline" rel="noreferrer" target="_blank">
               myaccount.google.com/permissions
             </a>
-            . Alle übrigen Daten zu deinen Kanälen löschst du mit deinem Clyp-Konto.
+            . Alle übrigen Daten zu deinen Kanälen löschst du mit deinem Ocuris-Konto.
           </p>
         </Section>
 
         <Section title="In English" lang="en">
           <p>
-            To delete your Clyp account and all data associated with it — including connected Instagram, YouTube and
+            To delete your Ocuris account and all data associated with it — including connected Instagram, YouTube and
             TikTok accounts and their access tokens — sign in, open “Konto & Daten” (Account &amp; data) and choose
-            “Konto löschen” (Delete account). Deletion is immediate and permanent. To revoke Clyp’s access to Instagram
-            only, disconnect the channel under “Kanäle” (Channels), or remove Clyp in your Facebook settings under
+            “Konto löschen” (Delete account). Deletion is immediate and permanent. To revoke Ocuris’s access to Instagram
+            only, disconnect the channel under “Kanäle” (Channels), or remove Ocuris in your Facebook settings under
             Business Integrations.
           </p>
         </Section>

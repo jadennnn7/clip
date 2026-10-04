@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { hasCompletedOnboarding, ONBOARDING_PATH, requiresOnboarding } from '@/lib/onboarding'
 
 const PUBLIC_ROUTES = [
-  '/', '/login', '/signup', '/auth', '/api/stripe/webhook', '/api/auth/login', '/api/oauth',
+  '/', '/login', '/signup', '/auth', '/api/stripe/webhook', '/api/auth/login', '/api/auth/password', '/api/oauth',
   // Editor-Demo der Landingpage und die Vorschaubilder für geteilte Links.
   '/demo', '/opengraph-image', '/twitter-image',
   // Rechtsseiten: müssen ohne Konto erreichbar sein, sobald es sie gibt.

@@ -4,7 +4,7 @@ import { ErrorState } from '@/components/errors/ErrorState'
 import { buttonVariants } from '@/components/ui/button'
 
 export const metadata: Metadata = {
-  title: 'Seite nicht gefunden — Clyp',
+  title: 'Seite nicht gefunden — Ocuris',
   robots: { index: false },
 }
 

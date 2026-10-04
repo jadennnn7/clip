@@ -1,16 +1,16 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { AlertCircle, ArrowRight, Check, FileVideo, Link2, Upload, X } from 'lucide-react'
 import { importLocalVideo } from '@/lib/local-media'
 import { startLinkImport } from '@/lib/link-import'
 import { classifyLink, findLinkInText } from '@/lib/links'
+import { EDITOR_ENABLED } from '@/lib/features'
 import { cn } from '@/lib/utils'
 import { DEFAULT_PROJECT_SETTINGS, type ProjectSettings } from '@/types/workspace'
 import { Button } from '@/components/ui/button'
-import { LiquidGlass } from '@/components/ui/liquid-glass-button'
 import { NEW_PROJECT_ANCHOR, NEW_PROJECT_EVENT } from '@/components/dashboard/new-project'
 
 /**
@@ -126,23 +126,30 @@ export function IntakeBar() {
   const thumbnail = busy && link?.source === 'youtube' ? youtubeThumbnail(link.url) : null
 
   return (
-    <LiquidGlass
+    // Leichtes Glas (`.glass`: Mattierung, Lichtkante, Schatten) in ruhiger
+    // Form — das Feld ist ein Werkzeug, kein Schmuckstück. Fokus legt einen
+    // Ring im Logo-Blau um die Fläche; der Glasschatten bleibt dabei stehen.
+    <div
       ref={rootRef}
-      onDragOver={(event) => { event.preventDefault(); if (!busy) setIsDragging(true) }}
-      onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setIsDragging(false) }}
-      onDrop={(event) => { event.preventDefault(); setIsDragging(false); if (!busy) acceptFile(event.dataTransfer.files) }}
+      // Eigene Dateien landen im Editor — solange er aus ist (`lib/features.ts`),
+      // nimmt das Feld nur Links an.
+      {...(EDITOR_ENABLED ? {
+        onDragOver: (event: DragEvent<HTMLDivElement>) => { event.preventDefault(); if (!busy) setIsDragging(true) },
+        onDragLeave: (event: DragEvent<HTMLDivElement>) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setIsDragging(false) },
+        onDrop: (event: DragEvent<HTMLDivElement>) => { event.preventDefault(); setIsDragging(false); if (!busy) acceptFile(event.dataTransfer.files) },
+      } : {})}
       className={cn(
-        'rounded-[2rem] p-2 text-left transition-shadow duration-700 ease-(--ease-out-quint)',
-        busy && 'shadow-[0_18px_60px_-24px_color-mix(in_oklab,var(--primary)_55%,transparent)]',
+        'glass group/intake rounded-2xl text-left',
+        'transition-[box-shadow] duration-300 ease-(--ease-out-quint)',
+        'focus-within:[box-shadow:0_0_0_1px_color-mix(in_oklab,var(--primary)_60%,transparent),0_0_0_5px_color-mix(in_oklab,var(--primary)_15%,transparent),var(--glass-shadow)]',
       )}
       aria-busy={busy}
     >
-      {/* Lichtkante, solange gestartet wird — liegt auf dem Glasrand, nicht
-          im Innenabstand, daher gegen `p-2` versetzt. */}
-      {busy && <span aria-hidden className="intake-sheen -inset-2 rounded-[2rem]" />}
+      {/* Lichtkante, solange gestartet wird — liegt genau auf dem Glasrand. */}
+      {busy && <span aria-hidden className="intake-sheen inset-0 rounded-[inherit]" />}
 
       {/* ── Obere Zone: Link oder gewählte Datei ────────────────── */}
-      <div className="flex items-center gap-2 rounded-[1.5rem] py-1 pr-1.5 pl-5">
+      <div className="flex items-center gap-3 p-2 pl-4">
         {file ? <>
           <FileVideo className={cn('size-4 shrink-0 transition-colors', busy ? 'text-primary' : 'text-muted-foreground/60')} />
           <p className="min-w-0 flex-1 truncate text-sm text-foreground/80 font-medium">{file.name}</p>
@@ -170,55 +177,23 @@ export function IntakeBar() {
             onChange={(event) => { setUrl(event.target.value); setError(null) }}
             onPaste={(event) => { if (acceptPaste(event.clipboardData.getData('text'))) event.preventDefault() }}
             onKeyDown={(event) => { if (event.key === 'Enter') void start() }}
-            className="h-11 min-w-0 flex-1 bg-transparent text-[15px] outline-none transition-colors duration-300 placeholder:text-muted-foreground/40 disabled:text-foreground/55"
+            className="h-11 min-w-0 flex-1 bg-transparent text-[15px] outline-none transition-colors duration-300 placeholder:text-muted-foreground/60 disabled:text-foreground/55"
           />
         </>}
-        {/* Der blaue Tropfen wie „Gratis starten" im Hero der Landing-Page:
-            dieselbe Stelle im Ablauf, dieselbe Form. Beim Laden bleibt die
-            Beschriftung stehen, nur der Pfeil wird zum Kreisel — so springt
-            weder der Knopf noch das Feld daneben. */}
+        {/* Die blaue Hauptaktion, konzentrisch zur Fläche gerundet und ohne
+            Schein darunter. Beim Laden bleibt die Beschriftung stehen, nur der
+            Pfeil wird zum Kreisel — so springt weder der Knopf noch das Feld. */}
         <Button
           onClick={() => void start()}
           disabled={busy}
           variant="prominent"
           size="lg"
-          className="h-10 shrink-0 gap-1.5 rounded-full px-5 tracking-tight disabled:opacity-100"
+          className="h-11 shrink-0 gap-1.5 rounded-xl px-4.5 tracking-tight shadow-[inset_0_1px_0_rgb(255_255_255/0.3),inset_0_-1px_0_rgb(0_0_0/0.15),0_1px_2px_rgb(0_0_0/0.25)] disabled:opacity-100"
         >
           <span className="max-sm:sr-only">{file ? 'Im Editor öffnen' : 'Clips erstellen'}</span>
           {busy ? <Spinner className="size-4" /> : <ArrowRight className="size-4" />}
         </Button>
       </div>
-
-      {/* ── Trennlinie ────────────────────────────────────────────── */}
-      <div className="mx-3 mt-2 border-t border-foreground/[0.06]" />
-
-      {/* ── Untere Zone: Datei-Upload oder, beim Start, die Schritte ─ */}
-      {busy ? (
-        <IntakeSteps
-          key="steps"
-          phase={phase}
-          labels={file
-            ? ['Videodatei erkannt', phase === 'working' ? 'Wird importiert' : 'Importiert', phase === 'done' ? 'Editor wird geöffnet' : 'Editor öffnen']
-            : [
-              `${link?.source === 'drive' ? 'Drive' : 'YouTube'}-Link erkannt`,
-              phase === 'working' ? 'Video wird abgerufen' : 'Video gefunden',
-              phase === 'done' ? 'Clips werden geöffnet' : 'Clips öffnen',
-            ]}
-        />
-      ) : (
-        <div className="flex h-10 items-center gap-1 px-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="rounded-full text-xs text-muted-foreground/60 hover:bg-foreground/[0.05] hover:text-muted-foreground dark:hover:bg-white/[0.05] transition-colors"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <Upload className="size-3.5" />
-            Videodatei wählen
-          </Button>
-          <span className="text-xs text-muted-foreground/35 select-none max-sm:hidden">oder hierher ziehen</span>
-        </div>
-      )}
 
       {/* ── Fehlermeldung ─────────────────────────────────────── */}
       {error && (
@@ -231,28 +206,60 @@ export function IntakeBar() {
         </p>
       )}
 
+      {/* ── Fußzeile: Datei-Upload oder, beim Start, die Schritte ─── */}
+      {busy || EDITOR_ENABLED ? <div className="rounded-b-[inherit] border-t border-foreground/[0.07] bg-foreground/[0.02]">
+        {busy ? (
+          <IntakeSteps
+            key="steps"
+            phase={phase}
+            labels={file
+              ? ['Videodatei erkannt', phase === 'working' ? 'Wird importiert' : 'Importiert', phase === 'done' ? 'Editor wird geöffnet' : 'Editor öffnen']
+              : [
+                `${link?.source === 'drive' ? 'Drive' : 'YouTube'}-Link erkannt`,
+                phase === 'working' ? 'Video wird abgerufen' : 'Video gefunden',
+                phase === 'done' ? 'Clips werden geöffnet' : 'Clips öffnen',
+              ]}
+          />
+        ) : (
+          <div className="flex h-11 items-center gap-1.5 px-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="rounded-lg text-xs font-medium text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Upload className="size-3.5" />
+              Datei hochladen
+            </Button>
+            <span className="select-none text-xs text-muted-foreground/50 max-sm:hidden">oder hierher ziehen</span>
+          </div>
+        )}
+      </div> : null}
+
       {/* ── Drag-Overlay ──────────────────────────────────────── */}
       {isDragging && (
-        <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 rounded-[inherit] border border-dashed border-brand/60 bg-black/50 backdrop-blur-xl">
-          <div className="flex size-11 items-center justify-center rounded-2xl bg-brand/15 ring-1 ring-brand/40">
-            <Upload className="size-5 text-brand" />
+        <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 rounded-[inherit] border-2 border-dashed border-primary/60 bg-background/85 backdrop-blur-md">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/30">
+            <Upload className="size-[18px] text-primary" />
           </div>
           <div className="text-center">
-            <p className="text-sm font-medium text-white/90">Videodatei ablegen</p>
-            <p className="text-xs text-white/50 mt-0.5">MP4, WebM oder MOV</p>
+            <p className="text-sm font-medium text-foreground">Videodatei ablegen</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">MP4, WebM oder MOV · bis 500 MB</p>
           </div>
         </div>
       )}
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="video/*,.mp4,.webm,.mov,.m4v"
-        className="hidden"
-        disabled={busy}
-        onChange={(event) => { acceptFile(event.target.files); event.target.value = '' }}
-      />
-    </LiquidGlass>
+      {EDITOR_ENABLED ? (
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="video/*,.mp4,.webm,.mov,.m4v"
+          className="hidden"
+          disabled={busy}
+          onChange={(event) => { acceptFile(event.target.files); event.target.value = '' }}
+        />
+      ) : null}
+    </div>
   )
 }
 
@@ -283,7 +290,12 @@ function SourceMark({ thumbnail }: { thumbnail: string | null }) {
         ready ? '-ml-2.5 w-14' : 'w-4',
       )}
     >
-      <Link2 className={cn('size-4 text-primary/70 transition-opacity duration-200', ready && 'opacity-0')} />
+      <Link2
+        className={cn(
+          'size-4 text-muted-foreground/60 transition-[color,opacity] duration-200 group-focus-within/intake:text-primary',
+          ready && 'opacity-0',
+        )}
+      />
       {thumbnail && (
         // Externes Bild in fester Kleinstgröße — `next/image` bräuchte dafür
         // eine Domain-Freigabe und brächte nichts.
@@ -312,7 +324,7 @@ function SourceMark({ thumbnail }: { thumbnail: string | null }) {
 function IntakeSteps({ phase, labels }: { phase: Phase; labels: [string, string, string] }) {
   const current = phase === 'working' ? 1 : 2
   return (
-    <div role="status" aria-live="polite" className="rise-in flex h-10 items-center gap-2 px-3 sm:gap-3">
+    <div role="status" aria-live="polite" className="rise-in flex h-11 items-center gap-2 px-4 sm:gap-3">
       {labels.map((label, index) => {
         const state = index < current ? 'done' : index === current ? 'active' : 'pending'
         return (

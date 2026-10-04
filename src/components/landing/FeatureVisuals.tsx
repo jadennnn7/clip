@@ -163,7 +163,7 @@ export function EditorVisual() {
 /** Ein Schnittgriff im Text: So sieht die Grenze eines Clips im Transkript aus. */
 function CutHandle() {
   return (
-    <span aria-hidden className="mx-0.5 inline-block h-5 w-1 rounded-full bg-brand shadow-[0_0_8px_rgb(111_186_253/0.7)]" />
+    <span aria-hidden className="mx-0.5 inline-block h-5 w-1 rounded-full bg-brand shadow-[0_0_8px_rgb(0_160_252/0.7)]" />
   )
 }
 

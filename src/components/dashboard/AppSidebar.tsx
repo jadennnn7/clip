@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import Image from 'next/image'
+import { LOGO } from '@/lib/logo'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTheme } from 'next-themes'
@@ -118,7 +119,7 @@ export function AppSidebar({ account }: AppSidebarProps) {
           >
             <span className="relative size-7 shrink-0 overflow-hidden group-data-collapsed/sidebar:group-hover/brand:opacity-0">
               <Image
-                src="/Logo.png"
+                src={LOGO}
                 alt=""
                 width={28}
                 height={28}
@@ -126,7 +127,7 @@ export function AppSidebar({ account }: AppSidebarProps) {
               />
             </span>
             <SidebarLabel className="leading-tight">
-              <span className="font-display text-[17px] font-semibold tracking-tight">Clyp</span>
+              <span className="font-display text-[17px] font-semibold tracking-tight">Ocuris</span>
             </SidebarLabel>
           </Link>
           <SidebarTrigger className="group-data-collapsed/sidebar:absolute group-data-collapsed/sidebar:left-0.5 group-data-collapsed/sidebar:opacity-0 group-data-collapsed/sidebar:group-hover/brand:opacity-100 group-data-collapsed/sidebar:focus-visible:opacity-100" />

@@ -3,8 +3,8 @@ import React from 'react'
 import { DarkDocument } from '@/components/editor/DarkDocument'
 
 export const metadata: Metadata = {
-  title: 'Editor-Demo — Clyp',
-  description: 'Der Clyp-Editor mit einem Beispielprojekt: Schnitt im Transkript, Untertitel und Bildausschnitt — ohne Anmeldung.',
+  title: 'Editor-Demo — Ocuris',
+  description: 'Der Ocuris-Editor mit einem Beispielprojekt: Schnitt im Transkript, Untertitel und Bildausschnitt — ohne Anmeldung.',
 }
 
 /**

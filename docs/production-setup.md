@@ -102,23 +102,38 @@ und als `TRIGGER_SECRET_KEY` in `.env.production` eintragen. Der
 ## 5. Anmelde-Mails (Supabase Auth)
 
 Die Anmeldung läuft nur per Magic Link. Der eingebaute Mailversand von
-Supabase ist nur zum Testen gedacht und stark begrenzt.
+Supabase ist nur zum Testen gedacht und stark begrenzt. `npm run auth:mail`
+stellt ihn auf Resend um, mit den deutschen Vorlagen aus
+`supabase/templates/`.
 
-1. Einen Mail-Anbieter mit eigener Absender-Domain einrichten, z. B. Resend
-   (SPF- und DKIM-Einträge im DNS setzen) oder Postmark.
-2. Supabase-Dashboard → *Authentication → Emails → SMTP Settings*: eigenes
-   SMTP einschalten. Bei Resend: Host `smtp.resend.com`, Port `465`, Nutzer
-   `resend`, Passwort = API-Key, Absender z. B. `login@<domain>`.
-3. *Authentication → Rate Limits*: „Emails sent per hour“ an den erwarteten
-   Andrang anpassen.
-4. *Authentication → URL Configuration*: Site URL `https://app.<domain>`,
-   unter Redirect URLs `https://app.<domain>/auth/callback` ergänzen. Fehlt der
-   Eintrag, landet der Magic Link auf der Site URL, und die Anmeldung schlägt
-   fehl.
+1. Bei [resend.com](https://resend.com) ein Konto anlegen und unter
+   *API Keys* einen Schlüssel mit **Full access** erzeugen.
+2. Ein persönliches Supabase-Token unter
+   `supabase.com/dashboard/account/tokens` erzeugen.
+3. In `.env.production` eintragen: `RESEND_API_KEY`, `SUPABASE_ACCESS_TOKEN`
+   und `MAIL_FROM` (Absender auf deiner Domain, z. B. `login@<domain>`).
+4. `npm run auth:mail -- --apply` legt die Domain bei Resend an und gibt die
+   DNS-Einträge aus (SPF, DKIM). Diese beim Domain-Anbieter setzen.
+5. Nach ein paar Minuten `npm run auth:mail -- --apply` erneut ausführen.
+   Sobald Resend die Domain bestätigt hat, stellt das Skript Supabase um:
+   SMTP über Resend, Absender, Vorlagen, Gültigkeit des Links (1 Stunde) und
+   ein Limit von 100 Mails pro Stunde. Ist `NEXT_PUBLIC_APP_URL` gesetzt, trägt
+   es auch Site URL und `https://app.<domain>/auth/callback` als Redirect URL
+   ein. Vorher ändert es an Supabase nichts.
+6. Auf `/login` einen Link an die eigene Adresse schicken und testen.
 
-Optional für `npm run prod:check`: ein persönliches Token von
-`supabase.com/dashboard/account/tokens` als `SUPABASE_ACCESS_TOKEN`. Die
-Prüfung liest damit nur und ändert nichts.
+Ohne `--apply` zeigt das Skript nur, was sich ändern würde. `npm run
+prod:check` liest mit demselben Token SMTP und Redirect-URLs und ändert nichts.
+
+Das Logo in den Mails schneidet das Skript bei jedem Lauf aus
+`public/Logo.png` zu und legt es öffentlich in Supabase Storage (Bucket
+`brand`, dafür liest es `SUPABASE_SERVICE_ROLE_KEY`). Nach einem neuen Logo
+also einfach `npm run auth:mail -- --apply` erneut ausführen.
+
+Die Vorlagen hängen `token_hash` an die Adresse, von der der Link angefordert
+wurde (`/auth/callback`, weitergeleitet an `/auth/confirm`). Dadurch geht der
+Link auch auf einem anderen Gerät auf als dem, auf dem er angefordert wurde,
+und Dev und Produktion können dasselbe Supabase-Projekt nutzen.
 
 Nutzt Produktion dieselbe Supabase-Datenbank wie die Entwicklung, muss
 `TOKEN_ENCRYPTION_KEY` in beiden gleich sein. Sonst sind die gespeicherten
@@ -143,8 +158,8 @@ bleiben.
 1. `npm run prod:check` bis ohne Fehler.
 2. Vercel → *Settings → Environment Variables → Production*: den Inhalt von
    `.env.production` einfügen (die Maske nimmt eine ganze .env-Datei an).
-   `YTDLP_*` und `SUPABASE_ACCESS_TOKEN` braucht nur der Worker bzw. die
-   Prüfung.
+   `YTDLP_*` braucht nur der Worker, `SUPABASE_ACCESS_TOKEN`, `RESEND_API_KEY`
+   und `MAIL_FROM` nur die Skripte auf deinem Rechner.
 3. `vercel --prod` oder Push auf den verbundenen Branch.
 4. Einmal durchspielen: Magic Link anfordern und anmelden, einen YouTube-Link
    einfügen, einen Clip rendern, einen Kanal verbinden.

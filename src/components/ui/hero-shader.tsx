@@ -1,12 +1,7 @@
-'use client'
-
 import type React from 'react'
 
-import { MeshGradient } from '@paper-design/shaders-react'
-import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion'
-
 /**
- * Shader-Hintergrund für den Hero.
+ * Hintergrund für den Hero (der Name stammt aus der Zeit mit Shader).
  *
  * Angepasst von Paper Design's "Hero Shader" — die Original-Farben
  * (#8b5cf6 Violett, #1e1b4b Indigo, #4c1d95 Purpur) sind hier durch die
@@ -22,6 +17,13 @@ import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion'
  * ihn führen — Maske, Spotlight, Raster, Scrim, Vignette, Auslauf. Sie
  * sind Weiß- und Schwarz-Alpha und garantieren, dass Text immer auf nahezu
  * Schwarz sitzt.
+ *
+ * Seit dem Nachthimmel darüber liefen die zwei Mesh-Shader fast nur noch
+ * unsichtbar: Oben deckt sie der Himmel, sichtbar blieb ein schwaches blaues
+ * Band am unteren Rand des ersten Bildschirms. Dafür rechneten zwei
+ * WebGL-Leinwände von je rund 2600 × 3200 Pixeln ohne Pause. Jetzt steht
+ * dort ein fester Verlauf, gegen den Mittelwert der Shader gemessen: Er
+ * weicht davon weniger ab als jedes einzelne Bild der Animation.
  */
 interface ShaderBackgroundProps {
   children: React.ReactNode
@@ -40,14 +42,6 @@ export function ShaderBackground({
   className,
   fade = true,
 }: ShaderBackgroundProps) {
-  const reducedMotion = usePrefersReducedMotion()
-
-  // Die Shader rendern auf Canvas — die `prefers-reduced-motion`-Regel aus
-  // `globals.css` greift dort nicht, weil sie nur CSS-Animationen abschaltet.
-  // Speed 0 friert das Mesh auf einem Standbild ein, statt es zu entfernen:
-  // Die Komposition bleibt identisch, nur die Bewegung fällt weg.
-  const speedFactor = reducedMotion ? 0 : 1
-
   return (
     <div
       className={`relative isolate w-full overflow-hidden bg-black ${className ?? ''}`}
@@ -96,14 +90,12 @@ export function ShaderBackground({
         </defs>
       </svg>
 
-      {/* Schicht 1 — das Mesh selbst, maskiert.
-          `backgroundColor`/`wireframe` aus der Vorlage existieren in der
-          installierten Paketversion (0.0.80) nicht mehr; die Basisfläche kommt
-          aus dem `bg-black` des Containers. Die Maske zieht das Licht nach
-          oben und lässt es zum unteren Rand hin auf Schwarz auslaufen, damit
-          der Hero nicht mit einer harten Kante in den nächsten Abschnitt
-          stößt. Langsamer und weniger verzerrt als zuvor: Ein Hintergrund,
-          der sich sichtbar windet, zieht den Blick von der Headline ab. */}
+      {/* Schicht 1 — das Licht, maskiert: ein fester Verlauf an der Stelle
+          der früheren Mesh-Shader. Die Maske zieht es nach oben und lässt es
+          zum unteren Rand hin auf Schwarz auslaufen, damit der Hero nicht mit
+          einer harten Kante in den nächsten Abschnitt stößt. Die Werte sind
+          am Bild der Shader gemessen (1440 × 900): Grundton, darüber ein
+          hellerer Streifen auf Höhe des Bands und rechts davon ein Lichtfleck. */}
       <div
         className="absolute inset-0 opacity-95"
         style={{
@@ -113,17 +105,12 @@ export function ShaderBackground({
             'radial-gradient(130% 78% at 50% 4%, #000 0%, #000 38%, transparent 82%)',
         }}
       >
-        <MeshGradient
-          className="absolute inset-0 size-full"
-          colors={['#000000', '#2493ff', '#8fc8ff', '#0b2f5c', '#4aa3ff']}
-          speed={0.14 * speedFactor}
-          distortion={0.62}
-        />
-        <MeshGradient
-          className="absolute inset-0 size-full opacity-45"
-          colors={['#000000', '#d2e8fd', '#2f7fd6', '#000000']}
-          speed={0.09 * speedFactor}
-          grainOverlay={0.4}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'radial-gradient(45% 20% at 70% 55%, rgba(80,150,215,0.45), transparent), radial-gradient(30% 15% at 12% 46%, rgba(0,0,0,0.25), transparent), linear-gradient(to bottom, rgb(42,82,118) 42%, rgb(54,104,150) 54%, rgb(50,97,140) 62%)',
+          }}
         />
       </div>
 

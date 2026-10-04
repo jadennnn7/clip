@@ -14,6 +14,7 @@ import { DeleteProjectDialog, RenameProjectDialog, processProject } from '@/comp
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { EDITOR_ENABLED } from '@/lib/features'
 import { ACTIVE_STATUSES, expectedClipCount, isLinkProject, mediaUrl } from '@/lib/link-import'
 import { usePublishingJobs, type PublishingJobSummary } from '@/lib/publishing-client'
 import { cn } from '@/lib/utils'
@@ -126,20 +127,20 @@ export function ProjectClips({ projectId }: { projectId: string }) {
   const selectClass = 'h-9 min-w-0 rounded-lg border bg-background px-2.5 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring'
 
   return (
-    <div className="h-full overflow-y-auto bg-[#0c0d0e]">
-      <div className="mx-auto max-w-[80rem] px-4 py-6 sm:px-6">
+    <div className="h-full overflow-y-auto">
+      <div className="mx-auto max-w-[80rem] px-4 py-10 sm:px-6">
         {/* --- Zurück zur Übersicht ------------------------------------ */}
         <Link
           href="/dashboard/clips"
-          className="group mb-4 inline-flex items-center gap-1.5 text-sm text-zinc-400 transition-colors hover:text-white"
+          className="group mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
           aria-label="Zurück zur Clip-Bibliothek"
         >
           <ChevronLeft className="size-4 transition-transform duration-150 group-hover:-translate-x-0.5" />
           <span>Clip-Bibliothek</span>
         </Link>
         {/* --- Das Video ------------------------------------------------- */}
-        <header className="flex flex-col gap-5 sm:flex-row sm:items-start border-b border-white/[0.08] pb-6">
-          <div className="relative aspect-video w-full shrink-0 overflow-hidden rounded-xl bg-neutral-950 border border-white/10 sm:w-56">
+        <header className="flex flex-col gap-5 sm:flex-row sm:items-start border-b border-border pb-6">
+          <div className="relative aspect-video w-full shrink-0 overflow-hidden rounded-xl bg-muted border border-border sm:w-56">
             {project.thumbnail_url ?? clips.find((clip) => clip.thumbnail_url)?.thumbnail_url ? (
               <Image
                 src={(project.thumbnail_url ?? clips.find((clip) => clip.thumbnail_url)?.thumbnail_url)!}
@@ -150,12 +151,12 @@ export function ProjectClips({ projectId }: { projectId: string }) {
                 className={cn(project.thumbnail_url ? 'object-cover' : 'object-contain', failed && 'grayscale')}
               />
             ) : (
-              <div className="absolute inset-0 flex items-center justify-center"><FileVideo className="size-7 text-white/25" /></div>
+              <div className="absolute inset-0 flex items-center justify-center"><FileVideo className="size-7 text-muted-foreground/50" /></div>
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <h1 className="text-xl leading-tight font-semibold tracking-tight text-white sm:text-2xl">{project.title}</h1>
-            <p className="mt-1.5 text-xs text-zinc-400">
+            <h1 className="text-xl leading-tight font-semibold tracking-tight text-foreground sm:text-2xl">{project.title}</h1>
+            <p className="mt-1.5 text-xs text-muted-foreground">
               {[
                 sourceLine(project),
                 new Date(project.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' }),
@@ -163,7 +164,7 @@ export function ProjectClips({ projectId }: { projectId: string }) {
               ].join(' · ')}
             </p>
             <div className="mt-3.5 flex flex-wrap items-center gap-2">
-              {project.status === 'ready' || clips.length > 0 ? (
+              {EDITOR_ENABLED && (project.status === 'ready' || clips.length > 0) ? (
                 <Button nativeButton={false} render={<Link href={`/dashboard/projects/${project.id}`} />}><Scissors />Im Editor öffnen</Button>
               ) : null}
               {project.source_url ? (
@@ -192,42 +193,44 @@ export function ProjectClips({ projectId }: { projectId: string }) {
           <section className="mt-6 flex flex-col items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive/[0.06] p-5 sm:flex-row sm:items-center">
             <CircleAlert className="size-5 shrink-0 text-destructive" />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-white">Das Video konnte nicht geschnitten werden</p>
-              <p className="mt-1 text-sm text-zinc-400">{project.error_message ?? 'Unbekannter Fehler.'}</p>
+              <p className="text-sm font-medium text-foreground">Das Video konnte nicht geschnitten werden</p>
+              <p className="mt-1 text-sm text-muted-foreground">{project.error_message ?? 'Unbekannter Fehler.'}</p>
             </div>
             {canProcess ? <Button variant="outline" onClick={() => processProject(project)}><RotateCw />Erneut versuchen</Button> : null}
           </section>
         ) : null}
 
         {unprocessed ? (
-          <section className="mt-6 flex flex-col items-center rounded-2xl border border-dashed border-white/10 px-5 py-14 text-center">
-            <Scissors className="mb-4 size-8 text-zinc-500" />
-            <h2 className="text-base font-medium text-white">Noch keine Clips</h2>
-            <p className="mt-2 max-w-sm text-sm text-zinc-400">
-              {canProcess ? 'Aus diesem Video wurden noch keine Clips geschnitten.' : 'Öffne das Video im Editor, um Clips von Hand zu schneiden.'}
+          <section className="mt-6 flex flex-col items-center rounded-2xl border border-dashed border-border px-5 py-14 text-center">
+            <Scissors className="mb-4 size-8 text-muted-foreground/70" />
+            <h2 className="text-base font-medium text-foreground">Noch keine Clips</h2>
+            <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+              {canProcess
+                ? 'Aus diesem Video wurden noch keine Clips geschnitten.'
+                : EDITOR_ENABLED ? 'Öffne das Video im Editor, um Clips von Hand zu schneiden.' : 'Für dieses Video lassen sich gerade keine Clips erstellen.'}
             </p>
             {canProcess ? (
               <Button className="mt-5" onClick={() => processProject(project)}><Scissors />Clips erstellen</Button>
-            ) : (
+            ) : EDITOR_ENABLED ? (
               <Button className="mt-5" nativeButton={false} render={<Link href={`/dashboard/projects/${project.id}`} />}>Im Editor öffnen</Button>
-            )}
+            ) : null}
           </section>
         ) : null}
 
         {/* --- OpusClip Toolbar / Subheader ---------------------------- */}
         {clips.length > 0 || processing ? (
           <section className="mt-6" aria-labelledby="clips-heading">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] pb-3.5">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3.5">
               <div className="flex items-center gap-3">
                 {/* Grid & List view toggle */}
-                <div className="flex items-center rounded-lg border border-white/10 bg-[#141519] p-0.5">
+                <div className="flex items-center rounded-lg bg-foreground/[0.04] p-0.5 ring-1 ring-border ring-inset">
                   <button
                     type="button"
                     onClick={() => setViewMode('grid')}
                     aria-label="Rasteransicht"
                     className={cn(
                       'flex size-7 items-center justify-center rounded-md transition-colors',
-                      viewMode === 'grid' ? 'bg-white/10 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300',
+                      viewMode === 'grid' ? 'bg-foreground/10 text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
                     )}
                   >
                     <Grid className="size-3.5" />
@@ -238,7 +241,7 @@ export function ProjectClips({ projectId }: { projectId: string }) {
                     aria-label="Listenansicht"
                     className={cn(
                       'flex size-7 items-center justify-center rounded-md transition-colors',
-                      viewMode === 'list' ? 'bg-white/10 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300',
+                      viewMode === 'list' ? 'bg-foreground/10 text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
                     )}
                   >
                     <List className="size-3.5" />
@@ -246,9 +249,9 @@ export function ProjectClips({ projectId }: { projectId: string }) {
                 </div>
 
                 {/* Dropdown / Label: Original-Clips (23) */}
-                <div className="flex items-center gap-1.5 text-sm font-semibold text-zinc-200">
+                <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground/90">
                   <span>Original-Clips</span>
-                  <span className="font-mono text-xs font-normal text-zinc-500 tabular-nums">
+                  <span className="font-mono text-xs font-normal text-muted-foreground tabular-nums">
                     ({clips.length})
                   </span>
                 </div>
@@ -256,17 +259,17 @@ export function ProjectClips({ projectId }: { projectId: string }) {
 
               {/* Right: Search, Filter, Auswählen & Arrows */}
               <div className="flex items-center gap-2">
-                <label className="hidden md:flex h-8 items-center gap-2 rounded-lg border border-white/10 bg-[#141519] px-2.5 text-xs sm:w-48 lg:w-60">
-                  <Search className="size-3.5 shrink-0 text-zinc-500" />
+                <label className="hidden md:flex h-8 items-center gap-2 rounded-lg bg-foreground/[0.04] px-2.5 text-xs ring-1 ring-border ring-inset focus-within:ring-ring sm:w-48 lg:w-60">
+                  <Search className="size-3.5 shrink-0 text-muted-foreground" />
                   <input
                     aria-label="Clips durchsuchen"
                     placeholder="Suchen..."
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
-                    className="min-w-0 flex-1 bg-transparent text-xs text-zinc-200 placeholder:text-zinc-500 outline-none"
+                    className="min-w-0 flex-1 bg-transparent text-xs text-foreground placeholder:text-muted-foreground/70 outline-none"
                   />
                   {query ? (
-                    <button aria-label="Suche zurücksetzen" onClick={() => setQuery('')} className="text-zinc-500 hover:text-white">
+                    <button aria-label="Suche zurücksetzen" onClick={() => setQuery('')} className="text-muted-foreground hover:text-foreground">
                       <X className="size-3" />
                     </button>
                   ) : null}
@@ -279,8 +282,8 @@ export function ProjectClips({ projectId }: { projectId: string }) {
                     if (selecting) setSelected([])
                   }}
                   className={cn(
-                    'flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-colors',
-                    selecting ? 'border-blue-500 bg-blue-600 text-white' : 'border-white/10 bg-[#16171b] text-zinc-300 hover:bg-[#202228] hover:text-white',
+                    'flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-medium transition-colors',
+                    selecting ? 'bg-primary text-primary-foreground' : 'control',
                   )}
                 >
                   <CheckSquare className="size-3.5" />
@@ -291,8 +294,8 @@ export function ProjectClips({ projectId }: { projectId: string }) {
                   type="button"
                   onClick={() => setOnlyFavorites(!onlyFavorites)}
                   className={cn(
-                    'flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-colors',
-                    onlyFavorites ? 'border-white/20 bg-white/10 text-white' : 'border-white/10 bg-[#16171b] text-zinc-300 hover:bg-[#202228] hover:text-white',
+                    'flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-medium transition-colors',
+                    onlyFavorites ? 'bg-foreground/10 text-foreground ring-1 ring-foreground/20 ring-inset' : 'control',
                   )}
                 >
                   <SlidersHorizontal className="size-3.5" />
@@ -300,14 +303,14 @@ export function ProjectClips({ projectId }: { projectId: string }) {
                 </button>
 
                 {sheet.open && sheet.clipId ? (
-                  <div className="flex items-center gap-1 pl-2 border-l border-white/10">
+                  <div className="flex items-center gap-1 pl-2 border-l border-border">
                     <button
                       type="button"
                       disabled={!prevClip}
                       onClick={() => prevClip && showClip(prevClip.id)}
                       aria-label="Vorheriger Clip"
                       title="Vorheriger Clip (↑)"
-                      className="flex size-8 items-center justify-center rounded-lg border border-white/10 bg-[#16171b] text-zinc-400 hover:text-white hover:bg-[#202228] disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                      className="flex size-8 items-center justify-center control rounded-lg disabled:opacity-30 disabled:pointer-events-none transition-colors"
                     >
                       <ChevronUp className="size-4" />
                     </button>
@@ -317,7 +320,7 @@ export function ProjectClips({ projectId }: { projectId: string }) {
                       onClick={() => nextClip && showClip(nextClip.id)}
                       aria-label="Nächster Clip"
                       title="Nächster Clip (↓)"
-                      className="flex size-8 items-center justify-center rounded-lg border border-white/10 bg-[#16171b] text-zinc-400 hover:text-white hover:bg-[#202228] disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                      className="flex size-8 items-center justify-center control rounded-lg disabled:opacity-30 disabled:pointer-events-none transition-colors"
                     >
                       <ChevronDown className="size-4" />
                     </button>
@@ -326,7 +329,7 @@ export function ProjectClips({ projectId }: { projectId: string }) {
                       onClick={() => showClip(null)}
                       aria-label="Schließen"
                       title="Schließen"
-                      className="flex size-8 items-center justify-center rounded-lg border border-white/10 bg-[#16171b] text-zinc-400 hover:text-white hover:bg-[#202228] transition-colors"
+                      className="flex size-8 items-center justify-center control rounded-lg"
                     >
                       <X className="size-4" />
                     </button>
@@ -337,10 +340,10 @@ export function ProjectClips({ projectId }: { projectId: string }) {
 
             {/* --- OpusClip Automatische Überschrift Banner -------------------- */}
             {bannerVisible ? (
-              <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-white/[0.08] bg-[#141519] px-4 py-3 shadow-md">
+              <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 glass-tile rounded-2xl px-4 py-3">
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-xs font-semibold text-white">Automatische Überschrift</h3>
-                  <p className="mt-1 text-xs text-zinc-400 leading-relaxed max-w-3xl">
+                  <h3 className="text-xs font-semibold text-foreground">Automatische Überschrift</h3>
+                  <p className="mt-1 text-xs text-muted-foreground leading-relaxed max-w-3xl">
                     Eine Überschrift wurde zu den ersten 5 Sekunden Ihrer Top-10-Videos hinzugefügt. Falls Sie diese nicht benötigen, klicken Sie auf „Deaktivieren“. Wenn Sie sie weiter verfeinern möchten, gehen Sie zu „Clip bearbeiten“.
                   </p>
                 </div>
@@ -351,7 +354,7 @@ export function ProjectClips({ projectId }: { projectId: string }) {
                       setBannerVisible(false)
                       toast.info('Automatische Überschriften deaktiviert')
                     }}
-                    className="rounded-lg border border-white/10 bg-[#1a1b22] px-3 py-1.5 text-xs font-medium text-zinc-300 hover:text-white hover:bg-[#22242c] transition-colors"
+                    className="control rounded-lg px-3 py-1.5 text-xs font-medium"
                   >
                     Deaktivieren
                   </button>
@@ -359,7 +362,7 @@ export function ProjectClips({ projectId }: { projectId: string }) {
                     type="button"
                     onClick={() => setBannerVisible(false)}
                     aria-label="Banner schließen"
-                    className="flex size-7 items-center justify-center rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 transition-colors"
+                    className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-foreground/10 transition-colors"
                   >
                     <X className="size-3.5" />
                   </button>
@@ -368,10 +371,10 @@ export function ProjectClips({ projectId }: { projectId: string }) {
             ) : null}
 
             {selectedIds.length > 0 ? (
-              <div className="sticky top-3 z-20 mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-[#141519]/95 p-3 shadow-2xl backdrop-blur">
-                <span className="mr-2 text-xs font-medium text-white">{selectedIds.length} ausgewählt</span>
-                <button type="button" className="text-xs text-zinc-400 underline-offset-2 hover:underline hover:text-white" onClick={() => setSelected(visible.map((clip) => clip.id))}>Alle sichtbaren</button>
-                <select aria-label="Brand-Kit für ausgewählte Clips" value={kitId} onChange={(event) => setKitId(event.target.value)} className={cn(selectClass, 'max-w-48 bg-[#18191e] border-white/10 text-white')}>
+              <div className="sticky top-3 z-20 mt-4 flex flex-wrap items-center gap-2 glass rounded-2xl p-3">
+                <span className="mr-2 text-xs font-medium text-foreground">{selectedIds.length} ausgewählt</span>
+                <button type="button" className="text-xs text-muted-foreground underline-offset-2 hover:underline hover:text-foreground" onClick={() => setSelected(visible.map((clip) => clip.id))}>Alle sichtbaren</button>
+                <select aria-label="Brand-Kit für ausgewählte Clips" value={kitId} onChange={(event) => setKitId(event.target.value)} className={cn(selectClass, 'max-w-48')}>
                   <option value="">Brand-Kit auswählen</option>
                   {brandKits.map((kit) => <option key={kit.id} value={kit.id}>{kit.name}</option>)}
                 </select>
@@ -415,8 +418,8 @@ export function ProjectClips({ projectId }: { projectId: string }) {
             </div>
 
             {!processing && visible.length === 0 ? (
-              <div className="mt-4 flex flex-col items-center rounded-2xl border border-dashed border-white/10 px-5 py-14 text-center">
-                <p className="text-sm text-zinc-400">{onlyFavorites ? 'Markiere Clips mit dem Herz, um sie hier wiederzufinden.' : 'Kein Clip passt zur Suche.'}</p>
+              <div className="mt-4 flex flex-col items-center rounded-2xl border border-dashed border-border px-5 py-14 text-center">
+                <p className="text-sm text-muted-foreground">{onlyFavorites ? 'Markiere Clips mit dem Herz, um sie hier wiederzufinden.' : 'Kein Clip passt zur Suche.'}</p>
                 <Button className="mt-4" variant="outline" size="sm" onClick={() => { setQuery(''); setOnlyFavorites(false) }}>Alle Clips anzeigen</Button>
               </div>
             ) : null}
@@ -458,12 +461,12 @@ export function ProjectClips({ projectId }: { projectId: string }) {
 function ProjectClipsSkeleton({ outputFormat }: { outputFormat: OutputFormat }) {
   const bar = 'shimmer rounded-full bg-foreground/[0.06]'
   return (
-    <div role="status" aria-live="polite" className="h-full overflow-y-auto bg-[#0c0d0e]">
+    <div role="status" aria-live="polite" className="h-full overflow-y-auto">
       <span className="sr-only">Clips werden geladen …</span>
-      <div aria-hidden className="mx-auto max-w-[80rem] px-4 py-6 sm:px-6">
+      <div aria-hidden className="mx-auto max-w-[80rem] px-4 py-10 sm:px-6">
         <div className="mb-4 h-5 w-28 shimmer rounded-md bg-foreground/[0.04]" />
-        <div className="flex flex-col gap-5 border-b border-white/[0.08] pb-6 sm:flex-row sm:items-start">
-          <div className="shimmer relative aspect-video w-full shrink-0 rounded-xl border border-white/10 bg-foreground/[0.04] sm:w-56" />
+        <div className="flex flex-col gap-5 border-b border-border pb-6 sm:flex-row sm:items-start">
+          <div className="shimmer relative aspect-video w-full shrink-0 rounded-xl border border-border bg-foreground/[0.04] sm:w-56" />
           <div className="min-w-0 flex-1 pt-1">
             <div className={cn(bar, 'h-6 w-3/4 sm:w-96')} />
             <div className={cn(bar, 'mt-3 h-3 w-1/2 sm:w-64')} />
@@ -475,7 +478,7 @@ function ProjectClipsSkeleton({ outputFormat }: { outputFormat: OutputFormat }) 
           </div>
         </div>
 
-        <div className="mt-6 flex items-center justify-between gap-3 border-b border-white/[0.08] pb-3.5">
+        <div className="mt-6 flex items-center justify-between gap-3 border-b border-border pb-3.5">
           <div className="flex items-center gap-3">
             <div className="shimmer h-9 w-[4.5rem] rounded-lg bg-foreground/[0.05]" />
             <div className="shimmer hidden h-9 w-56 rounded-lg bg-foreground/[0.04] sm:block" />

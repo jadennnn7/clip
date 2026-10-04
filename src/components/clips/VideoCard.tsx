@@ -9,6 +9,7 @@ import { CuttingChip, PipelineSteps, ViewfinderBand, sourceLine } from '@/compon
 import { ACTIVE_STATUSES, isLinkProject } from '@/lib/link-import'
 import { cn } from '@/lib/utils'
 import type { Clip, Project } from '@/types/database'
+import { EDITOR_ENABLED } from '@/lib/features'
 
 /**
  * Ein Video in der Bibliothek — die ungeschnittene Quelle, nicht ihre Clips.
@@ -128,16 +129,6 @@ export function VideoCard({
           </span>
         ) : null}
 
-        {!processing && !failed ? (
-          <span
-            aria-hidden
-            className="liquid pointer-events-none absolute top-1/2 left-1/2 z-[1] flex -translate-x-1/2 -translate-y-1/2 scale-75 items-center gap-1.5 rounded-full px-3.5 py-2 text-[11px] font-semibold opacity-0 shadow-lg transition-[transform,opacity] duration-500 ease-[var(--ease-spring)] group-hover/card:scale-100 group-hover/card:opacity-100 group-focus-within/card:scale-100 group-focus-within/card:opacity-100"
-          >
-            <Scissors className="size-3.5" />
-            Öffnen
-          </span>
-        ) : null}
-
         {failed ? (
           <div className="absolute inset-0 flex items-center justify-center bg-black/40">
             <span className="flex items-center gap-2 rounded-md bg-black/75 px-3 py-1.5 text-xs font-medium text-white">
@@ -195,7 +186,7 @@ export function VideoCard({
             <MoreHorizontal />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {!failed && !processing ? (
+            {EDITOR_ENABLED && !failed && !processing ? (
               <DropdownMenuItem render={<Link href={`/dashboard/projects/${project.id}`} />}>
                 <Scissors />Im Editor öffnen
               </DropdownMenuItem>

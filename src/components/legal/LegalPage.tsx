@@ -2,6 +2,8 @@ import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { BrandMark } from '@/components/landing/BrandMark'
 
+import { cn } from '@/lib/utils'
+
 /** Die Rechtsseiten untereinander — auf jeder steht der Weg zu den anderen. */
 const LEGAL_LINKS = [
   { href: '/impressum', label: 'Impressum' },
@@ -16,15 +18,17 @@ const LEGAL_LINKS = [
 export function LegalPage({
   title,
   intro,
+  containerClassName,
   children,
 }: {
   title: string
   intro?: ReactNode
+  containerClassName?: string
   children: ReactNode
 }) {
   return (
     <main className="min-h-dvh bg-background text-foreground">
-      <div className="mx-auto w-full max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
+      <div className={cn("mx-auto w-full max-w-2xl px-4 py-12 sm:px-6 sm:py-16", containerClassName)}>
         <Link href="/" aria-label="Zur Startseite" className="-ml-1 inline-flex rounded-full py-1 pr-2 pl-1 outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <BrandMark />
         </Link>

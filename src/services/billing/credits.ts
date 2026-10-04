@@ -65,7 +65,7 @@ export interface CreditBalance {
   nextGrantAt: string | null
   /** Verbleibende Gratis-Exporte, null wenn Exporte nicht begrenzt sind. */
   trialExportsLeft: number | null
-  /** Clips tragen das Clyp-Wasserzeichen: Gratis-Tarif ohne aktives Abo. */
+  /** Clips tragen das Ocuris-Wasserzeichen: Gratis-Tarif ohne aktives Abo. */
   watermark: boolean
 }
 

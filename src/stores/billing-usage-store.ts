@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { create } from 'zustand'
 import { useWorkspaceStore } from '@/stores/workspace-store'
 import type { SubscriptionTier } from '@/types/database'
+import type { BillingInterval } from '@/lib/stripe/plans'
 
 /** Wie `CreditBalance` in `services/billing/credits.ts`, als JSON. */
 export interface BillingUsage {
@@ -16,6 +17,10 @@ export interface BillingUsage {
   trialExportsLeft: number | null
   /** Gratis-Tarif: Die Vorschau zeigt das Wasserzeichen, das der Export bekommt. */
   watermark: boolean
+  /** Laufzeit des aktiven Abos, null ohne Abo. */
+  interval: BillingInterval | null
+  /** Ob der Jahrestarif in Stripe eingerichtet und buchbar ist. */
+  yearlyAvailable: boolean
 }
 
 const isAmount = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value >= 0
@@ -36,6 +41,8 @@ function parseUsage(data: unknown): BillingUsage | null {
     nextGrantAt: value.nextGrantAt as string | null,
     trialExportsLeft: value.trialExportsLeft as number | null,
     watermark: value.watermark === true,
+    interval: value.interval === 'year' || value.interval === 'month' ? value.interval : null,
+    yearlyAvailable: value.yearlyAvailable === true,
   }
 }
 

@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
  * Das Bild der Anmeldeseite: der Veröffentlichungs-Feed eines Kontos.
  *
  * Die Startseite zeigt, wie aus einem Video Clips werden. Hier steht, was
- * danach kommt — das, worin Clyp sich von reinen Schnitt-Tools
+ * danach kommt — das, worin Ocuris sich von reinen Schnitt-Tools
  * unterscheidet: Clips, die geplant, freigegeben und veröffentlicht werden.
  * Die Zustände sind genau die der Warteschlange im Produkt, keine Kennzahlen
  * und keine erfundenen Kundenstimmen.

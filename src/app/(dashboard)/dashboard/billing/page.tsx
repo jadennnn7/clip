@@ -10,6 +10,10 @@ import {
   ROLLOVER_NOTE,
   TRIAL,
   videoTimeFor,
+  YEARLY_SAVING_PERCENT,
+  YEARLY_TERM_NOTE,
+  yearlyPerMonth,
+  type BillingInterval,
 } from '@/lib/stripe/plans'
 import { startCheckout, type CheckoutRequest } from '@/lib/stripe/start-checkout'
 import { Button } from '@/components/ui/button'
@@ -17,6 +21,8 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { BillingIntervalSwitch } from '@/components/ui/billing-interval-switch'
+import NumberFlow from '@number-flow/react'
 import { PageHeader } from '@/components/dashboard/PageHeader'
 import { cn } from '@/lib/utils'
 import { refreshBillingUsage, useBillingUsage } from '@/stores/billing-usage-store'
@@ -24,6 +30,7 @@ import { formatCredits } from '@/lib/credit-format'
 
 const PAID_PLANS = PLANS.filter((plan) => plan.priceEnv !== null)
 const day = new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'long' })
+const euro = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 2 })
 
 export default function BillingPageClient() {
   const [loading, setLoading] = useState<string | null>(null)
@@ -31,6 +38,10 @@ export default function BillingPageClient() {
   const { usage, loading: usageLoading, error: usageError } = useBillingUsage()
   const subscribed = (usage?.monthlyCredits ?? 0) > 0
   const reference = subscribed ? usage!.monthlyCredits : TRIAL.credits
+  // Ohne eigene Wahl zeigt die Seite die Laufzeit des laufenden Abos.
+  const [pickedInterval, setPickedInterval] = useState<BillingInterval | null>(null)
+  const yearlyAvailable = usage?.yearlyAvailable ?? false
+  const interval: BillingInterval = yearlyAvailable ? pickedInterval ?? usage?.interval ?? 'month' : 'month'
 
   const handleCheckout = async (key: string, request: CheckoutRequest) => {
     setLoading(key)
@@ -49,7 +60,7 @@ export default function BillingPageClient() {
           description="1 Credit = 1 Minute Ausgangsvideo. Die Clips daraus, die Bearbeitung und die Exporte sind inklusive."
         />
 
-        <Card className="mb-8 shadow-xs">
+        <Card className="mb-8">
           <CardHeader>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
@@ -117,20 +128,36 @@ export default function BillingPageClient() {
         ) : null}
 
         <div className="mb-10">
-          <h2 className="mb-1 text-sm font-medium">Tarife</h2>
-          <p className="mb-4 text-xs text-muted-foreground">
-            Preise inklusive Umsatzsteuer, monatlich kündbar.
-          </p>
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="mb-1 text-sm font-medium">Tarife</h2>
+              <p className="text-xs text-muted-foreground">
+                {interval === 'year'
+                  ? `Preise inklusive Umsatzsteuer. ${YEARLY_TERM_NOTE}`
+                  : 'Preise inklusive Umsatzsteuer, monatlich kündbar.'}
+              </p>
+            </div>
+            {yearlyAvailable ? (
+              <BillingIntervalSwitch
+                value={interval}
+                onChange={setPickedInterval}
+                savingPercent={YEARLY_SAVING_PERCENT}
+                size="sm"
+                className="bg-muted ring-1 ring-border ring-inset"
+              />
+            ) : null}
+          </div>
           <div className="grid gap-4 md:grid-cols-3">
             {PAID_PLANS.map((plan) => {
-              const isCurrent = subscribed && plan.tier === usage?.tier
-              const key = `plan:${plan.tier}`
+              const isCurrent = subscribed && plan.tier === usage?.tier && (usage?.interval ?? 'month') === interval
+              const key = `plan:${plan.tier}:${interval}`
+              const yearly = interval === 'year'
               return (
                 <Card
                   key={plan.tier}
                   className={cn(
-                    'transition-ui shadow-xs hover:shadow-sm',
-                    isCurrent && 'border-primary/60 shadow-sm',
+                    'transition-ui',
+                    isCurrent && 'outline outline-primary/60',
                   )}
                 >
                   <CardHeader>
@@ -139,10 +166,19 @@ export default function BillingPageClient() {
                       {isCurrent ? <Badge variant="secondary">Aktuell</Badge> : null}
                     </div>
                     <CardDescription>
-                      <span className="text-3xl font-semibold tracking-tight text-foreground">
-                        {plan.priceMonthly} €
-                      </span>
+                      <NumberFlow
+                        value={yearly ? yearlyPerMonth(plan) : plan.priceMonthly}
+                        locales="de-DE"
+                        suffix=" €"
+                        className="text-3xl font-semibold tracking-tight text-foreground"
+                      />
                       <span className="text-xs"> / Monat</span>
+                      {yearly ? (
+                        <span className="mt-1 block text-xs">
+                          {euro.format(plan.priceYearly)} € jährlich abgerechnet · du sparst{' '}
+                          {euro.format(plan.priceMonthly * 12 - plan.priceYearly)} €
+                        </span>
+                      ) : null}
                       <span className="mt-1 block text-xs">{plan.audience}</span>
                     </CardDescription>
                   </CardHeader>
@@ -160,7 +196,7 @@ export default function BillingPageClient() {
                       size="sm"
                       className="w-full"
                       disabled={!usage || isCurrent || loading !== null}
-                      onClick={() => { void handleCheckout(key, { kind: 'plan', tier: plan.tier }) }}
+                      onClick={() => { void handleCheckout(key, { kind: 'plan', tier: plan.tier, interval }) }}
                     >
                       {loading === key ? (
                         <Loader2 className="size-4 animate-spin" />
@@ -188,7 +224,7 @@ export default function BillingPageClient() {
             {CREDIT_PACKS.map((pack) => {
               const key = `pack:${pack.id}`
               return (
-                <Card key={pack.id} className="transition-ui shadow-xs hover:shadow-sm">
+                <Card key={pack.id}>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Zap className="size-4 text-primary" />

@@ -4,6 +4,20 @@ import { requestOrigin } from '@/lib/request-origin'
 
 export async function GET(request: NextRequest) {
   const origin = requestOrigin(request)
+
+  // Die eigenen Mail-Vorlagen (`supabase/templates/`) hängen `token_hash` an
+  // die Redirect-Adresse statt eines PKCE-Codes. Eingelöst wird er in
+  // `/auth/confirm` — dort klappt es auch in einem anderen Browser als dem,
+  // in dem der Link angefordert wurde.
+  if (request.nextUrl.searchParams.has('token_hash')) {
+    return NextResponse.redirect(new URL(`/auth/confirm${request.nextUrl.search}`, origin))
+  }
+
+  // Google meldet Abbruch oder Fehler als `error` statt eines Codes.
+  if (request.nextUrl.searchParams.has('error')) {
+    return NextResponse.redirect(new URL('/login?error=oauth_failed', origin))
+  }
+
   const code = request.nextUrl.searchParams.get('code')
 
   if (code && code.length <= 4096) {

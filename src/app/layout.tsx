@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Bricolage_Grotesque, Geist_Mono, Inter } from 'next/font/google'
+import { Geist_Mono, Inter, Outfit } from 'next/font/google'
 import { ThemeProvider } from '@/components/theme-provider'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
@@ -31,26 +31,28 @@ const geistMono = Geist_Mono({
 })
 
 // Anzeigeschrift für Seitentitel, Kennzahlen und die Wortmarke. Inter trägt
-// die Oberfläche, Bricolage gibt ihr die eigene Stimme — nur dort, wo groß
-// gesetzt wird, damit Tabellen und Formulare ruhig bleiben. Die optische
-// Größe folgt der Schriftgröße, Titel bekommen also die engeren Formen.
-const bricolage = Bricolage_Grotesque({
-  subsets: ['latin'],
+// die Oberfläche, Outfit gibt ihr die eigene Stimme — nur dort, wo groß
+// gesetzt wird, damit Tabellen und Formulare ruhig bleiben.
+// Outfit (Google Fonts, SIL Open Font License) ersetzt Chillax: ähnlich rund
+// und freundlich, aber frei weitergebbar — die Fontshare-Lizenz von Chillax
+// vertrug sich nicht mit dem öffentlichen Repo. `next/font` liefert sie
+// selbst aus, Besucher laden nichts von Google. Variabel, also jede Stärke.
+const outfit = Outfit({
+  subsets: ['latin', 'latin-ext'],
   variable: '--font-display',
-  axes: ['opsz'],
   display: 'swap',
 })
 
-const TITLE = 'Clyp — Vom Langformat zum veröffentlichten Short'
+const TITLE = 'Ocuris — Vom Langformat zum veröffentlichten Short'
 const DESCRIPTION =
-  'Lade ein Video hoch, und Clyp schneidet, untertitelt und veröffentlicht die stärksten Momente automatisch auf YouTube Shorts, TikTok und Instagram Reels.'
+  'Lade ein Video hoch, und Ocuris schneidet, untertitelt und veröffentlicht die stärksten Momente automatisch auf YouTube Shorts, TikTok und Instagram Reels.'
 
 export const metadata: Metadata = {
   // Absolute Adressen für Vorschaubilder und Sitemap.
   metadataBase: siteUrl(),
   title: TITLE,
   description: DESCRIPTION,
-  openGraph: { type: 'website', locale: 'de_DE', siteName: 'Clyp', title: TITLE, description: DESCRIPTION },
+  openGraph: { type: 'website', locale: 'de_DE', siteName: 'Ocuris', title: TITLE, description: DESCRIPTION },
   twitter: { card: 'summary_large_image', title: TITLE, description: DESCRIPTION },
 }
 
@@ -59,7 +61,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="de" suppressHydrationWarning>
-      <body className={`${inter.variable} ${geistMono.variable} ${bricolage.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} ${geistMono.variable} ${outfit.variable} font-sans antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

@@ -1,6 +1,6 @@
 # Plattform-Freigaben beantragen
 
-Solange diese Freigaben fehlen, lädt Clyp auf YouTube nur **privat** hoch,
+Solange diese Freigaben fehlen, lädt Ocuris auf YouTube nur **privat** hoch,
 Instagram funktioniert nur für Konten, die in der Meta-App als Tester
 eingetragen sind, und TikTok nur im Sandbox-Modus. `npm run publishing:check`
 meldet deshalb alle drei als „NICHT BEREIT“.
@@ -12,7 +12,7 @@ seinen eigenen Entwickler-Konten; die Texte unten sind Vorlagen dafür.
 
 ## 0. Voraussetzungen für alle drei
 
-Alle drei Prüfer öffnen die Website und prüfen, ob Clyp ein echtes,
+Alle drei Prüfer öffnen die Website und prüfen, ob Ocuris ein echtes,
 öffentlich erreichbares Produkt ist:
 
 - [ ] **Produktions-Domain** mit HTTPS, `NEXT_PUBLIC_APP_URL` zeigt darauf
@@ -43,11 +43,11 @@ nicht überprüft“, und es gilt eine Obergrenze für Testnutzer.
 
 1. Google Search Console: Produktions-Domain als Eigentümer bestätigen.
 2. Google Cloud → APIs & Dienste → OAuth-Zustimmungsbildschirm: App-Name
-   „Clyp“, Logo, Startseite, Datenschutz- und AGB-Link, autorisierte Domain.
+   „Ocuris“, Logo, Startseite, Datenschutz- und AGB-Link, autorisierte Domain.
    Veröffentlichungsstatus auf **In Produktion**.
 3. Bereiche: `youtube.upload`, `youtube.readonly`. Für jeden die Begründung
    (Vorlage unten) und ein **nicht gelistetes YouTube-Video**, das zeigt:
-   Anmeldung bei Clyp → „Mit YouTube verbinden“ → Google-Zustimmung (App-Name
+   Anmeldung bei Ocuris → „Mit YouTube verbinden“ → Google-Zustimmung (App-Name
    und Client-ID in der Adresszeile sichtbar) → Clip veröffentlichen → das
    Video erscheint auf dem Kanal.
 4. Zur Überprüfung einreichen.
@@ -64,16 +64,16 @@ Trigger.dev-Worker setzen, beide neu deployen. Erst dann bietet die App
 
 Begründungen (englisch):
 
-> **youtube.upload** — Clyp turns a user's long-form video into short vertical
+> **youtube.upload** — Ocuris turns a user's long-form video into short vertical
 > clips. When the user clicks "Publish" or enables automatic publishing for
-> their channel, Clyp uploads the finished clip to that user's own YouTube
-> channel as a Short, with the title and description the user reviewed. Clyp
+> their channel, Ocuris uploads the finished clip to that user's own YouTube
+> channel as a Short, with the title and description the user reviewed. Ocuris
 > never uploads to a channel the user has not connected, and the user can
 > disconnect at any time on the Channels page.
 >
 > **youtube.readonly** — Used only to show which channel is connected (name and
-> avatar) and to display view counts of clips that Clyp published, so the user
-> can see which clips perform. Clyp does not read or store other videos,
+> avatar) and to display view counts of clips that Ocuris published, so the user
+> can see which clips perform. Ocuris does not read or store other videos,
 > comments, or subscriber data.
 
 ## 2. Instagram (Meta)
@@ -90,7 +90,7 @@ Im Meta-Entwicklerportal der App von `META_APP_ID`:
    Für jede eine Bildschirmaufnahme und die Begründung (Vorlage unten).
    Die Aufnahme muss den vollständigen Ablauf zeigen: Facebook-Login mit der
    Auswahl der Seite, die mit dem Instagram-Professional-Konto verknüpft ist →
-   Kanal erscheint in Clyp → Clip veröffentlichen → Reel auf Instagram.
+   Kanal erscheint in Ocuris → Clip veröffentlichen → Reel auf Instagram.
 4. Testanweisungen für die Prüfer: Testkonto, Link zu einem Testvideo, und
    dass ein Instagram-**Professional**-Konto mit verknüpfter Facebook-Seite
    nötig ist.
@@ -102,9 +102,9 @@ deployen.
 Begründungen (englisch):
 
 > **instagram_content_publish** — Publishes a Reel to the user's own Instagram
-> professional account when they click "Publish" in Clyp or enable automatic
+> professional account when they click "Publish" in Ocuris or enable automatic
 > publishing for that account. The video is the short clip the user created
-> and reviewed in Clyp's editor.
+> and reviewed in Ocuris's editor.
 >
 > **instagram_basic** — Reads the connected account's username and profile
 > picture so the user can see which account a clip will be posted to.
@@ -122,7 +122,7 @@ Im TikTok-Developer-Portal der App von `TIKTOK_CLIENT_KEY`:
 
 1. App-Details: Name, Symbol, Kategorie, Beschreibung, Website-URL,
    Datenschutz- und AGB-URL.
-2. Produkte: **Login Kit** und **Content Posting API**. Clyp nutzt die
+2. Produkte: **Login Kit** und **Content Posting API**. Ocuris nutzt die
    Bereiche `user.info.basic` und `video.upload`: Clips landen in der
    TikTok-Inbox des Nutzers, veröffentlicht wird in der TikTok-App. Direktes
    Veröffentlichen (`video.publish`) ist nicht eingebaut und wird deshalb auch
@@ -140,8 +140,8 @@ Begründungen (englisch):
 > avatar so the user knows where clips will be sent.
 >
 > **video.upload** — Sends a finished clip to the user's TikTok inbox when they
-> click "Publish" in Clyp. The user reviews, edits, and posts it in the TikTok
-> app themselves; Clyp never posts publicly on the user's behalf.
+> click "Publish" in Ocuris. The user reviews, edits, and posts it in the TikTok
+> app themselves; Ocuris never posts publicly on the user's behalf.
 
 ## 4. Nach den Freigaben
 

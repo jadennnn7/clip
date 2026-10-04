@@ -9,6 +9,7 @@ import type { Clip } from '@/types/database'
 import type { OutputFormat } from '@/types/workspace'
 import type { PublishingJobSummary } from '@/types/publishing'
 import { ClipPublishingStatus, type ClipPublishingEmptyState } from '@/components/publishing/ClipPublishingStatus'
+import { EDITOR_ENABLED } from '@/lib/features'
 
 const iconButton =
   'transition-ui flex size-8 items-center justify-center rounded-full text-muted-foreground outline-none hover:bg-foreground/[0.06] hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50'
@@ -63,7 +64,7 @@ export function ClipCard({
     <article
       className={cn(
         'rise-in group min-w-0',
-        layout === 'list' && 'grid grid-cols-[7rem_minmax(0,1fr)] grid-rows-[auto_1fr] items-start gap-x-4 rounded-xl border border-white/[0.08] bg-[#141519] p-3 sm:grid-cols-[9rem_minmax(0,1fr)]',
+        layout === 'list' && 'grid grid-cols-[7rem_minmax(0,1fr)] grid-rows-[auto_1fr] items-start gap-x-4 glass-tile rounded-2xl p-3 sm:grid-cols-[9rem_minmax(0,1fr)]',
       )}
       style={{ animationDelay: `${delay}ms` }}
     >
@@ -103,8 +104,8 @@ export function ClipCard({
       <div className={cn('flex items-center justify-between px-0.5', layout === 'grid' ? 'mt-2.5' : 'col-start-2 row-start-1')}>
         <span
           className={cn(
-            'font-display text-2xl font-bold tracking-tight tabular-nums',
-            clip.virality_score >= 90 ? 'text-[#22c55e]' : clip.virality_score >= 70 ? 'text-amber-400' : 'text-zinc-200',
+            'font-display text-2xl font-semibold tracking-tight tabular-nums',
+            clip.virality_score >= 90 ? 'text-emerald-500 dark:text-[#22c55e]' : clip.virality_score >= 70 ? 'text-amber-600 dark:text-amber-400' : 'text-foreground/70',
           )}
           title="Viralitäts-Score"
         >
@@ -118,7 +119,7 @@ export function ClipCard({
             href="/dashboard/connections"
             aria-label={`Veröffentlichungs-Einstellungen: ${clip.title}`}
             title="Freigabe-Queue oder Auto-Publish einstellen"
-            className="flex size-7 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
+            className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-foreground/10 hover:text-foreground transition-colors"
           >
             <CalendarClock className="size-3.5" />
           </Link>
@@ -133,18 +134,20 @@ export function ClipCard({
             }}
             aria-label={`HD herunterladen: ${clip.title}`}
             title="HD herunterladen"
-            className="flex size-7 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
+            className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-foreground/10 hover:text-foreground transition-colors"
           >
             <Download className="size-3.5" />
           </a>
-          <Link
-            href={editor}
-            aria-label={`Bearbeiten: ${clip.title}`}
-            title="Clip bearbeiten"
-            className="flex size-7 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
-          >
-            <Scissors className="size-3.5" />
-          </Link>
+          {EDITOR_ENABLED ? (
+            <Link
+              href={editor}
+              aria-label={`Bearbeiten: ${clip.title}`}
+              title="Clip bearbeiten"
+              className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-foreground/10 hover:text-foreground transition-colors"
+            >
+              <Scissors className="size-3.5" />
+            </Link>
+          ) : null}
         </div>
       </div>
 
@@ -152,13 +155,13 @@ export function ClipCard({
         type="button"
         onClick={selecting ? onSelect : onOpen}
         className={cn(
-          'block w-full px-0.5 text-left text-[13px] leading-snug font-medium text-zinc-200 outline-none hover:text-white focus-visible:underline transition-colors',
+          'block w-full px-0.5 text-left text-[13px] leading-snug font-medium text-foreground/90 outline-none hover:text-foreground focus-visible:underline transition-colors',
           layout === 'grid' ? 'mt-1' : 'col-start-2 row-start-2 mt-2 self-start',
         )}
       >
         <span className="line-clamp-2">{clip.title}</span>
       </button>
-      <div className={cn('mt-2.5 border-t border-white/[0.08] pt-2.5', layout === 'list' && 'col-start-2 row-start-3')}>
+      <div className={cn('mt-2.5 border-t border-border pt-2.5', layout === 'list' && 'col-start-2 row-start-3')}>
         <ClipPublishingStatus jobs={publishingJobs} emptyState={publishingState} compact onChanged={onPublishingChanged} />
       </div>
     </article>

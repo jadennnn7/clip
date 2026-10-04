@@ -32,7 +32,7 @@ export default function EditorHubPage() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 sm:py-12">
+      <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
         {/* Kopfbereich */}
         <header className="relative flex flex-wrap items-end justify-between gap-4 pb-8 border-b border-foreground/[0.08]">
           <div>

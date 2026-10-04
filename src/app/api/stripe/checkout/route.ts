@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getStripe } from '@/lib/stripe/client'
-import { CREDIT_PACKS, PLANS } from '@/lib/stripe/plans'
+import { CREDIT_PACKS, PLANS, priceEnvFor, type BillingInterval } from '@/lib/stripe/plans'
 import { requestOrigin } from '@/lib/request-origin'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { assertSameOrigin, getAuthenticatedUser, publishingErrorResponse } from '@/services/publishing/auth'
@@ -8,7 +8,8 @@ import { assertSameOrigin, getAuthenticatedUser, publishingErrorResponse } from 
 /**
  * Startet einen Kauf bei Stripe.
  *
- * - Tarif ohne laufendes Abo: Checkout für ein neues Abo.
+ * - Tarif ohne laufendes Abo: Checkout für ein neues Abo, monatlich oder
+ *   jährlich (`interval`).
  * - Tarif mit laufendem Abo: Stripe-Kundenportal mit dem gewählten Tarif zur
  *   Bestätigung. So entsteht nie ein zweites Abo neben dem ersten, und Stripe
  *   verrechnet den Wechsel anteilig (Einstellungen im Kundenportal).
@@ -29,11 +30,12 @@ export async function POST(request: Request) {
     return publishingErrorResponse(cause)
   }
 
-  const body = (await request.json().catch(() => null)) as { kind?: unknown; tier?: unknown; packId?: unknown } | null
+  const body = (await request.json().catch(() => null)) as { kind?: unknown; tier?: unknown; packId?: unknown; interval?: unknown } | null
   if (body?.kind === 'portal') return openPortal(stripe, userId, request)
+  const interval: BillingInterval = body?.interval === 'year' ? 'year' : 'month'
   const plan = body?.kind === 'plan' ? PLANS.find((item) => item.tier === body.tier && item.priceEnv) : undefined
   const pack = body?.kind === 'pack' ? CREDIT_PACKS.find((item) => item.id === body.packId) : undefined
-  const priceEnv = plan?.priceEnv ?? pack?.priceEnv
+  const priceEnv = (plan && priceEnvFor(plan, interval)) ?? pack?.priceEnv
   if (!priceEnv) return json(400, 'Unbekannter Tarif oder unbekanntes Paket.')
   const priceId = process.env[priceEnv]
   if (!priceId) {
@@ -59,6 +61,12 @@ export async function POST(request: Request) {
       const item = subscription.items.data[0]
       if (!item) throw new Error(`Abo ${subscription.id} hat keine Position`)
       if (item.price.id === priceId) return json(409, 'Das ist schon dein aktueller Tarif.')
+      // Ein Zeitplan hängt nur in den letzten Tagen eines Jahresabos daran
+      // (Übergang ins Monatsabo, siehe Webhook). Solange lässt das
+      // Kundenportal keinen Wechsel zu.
+      if (subscription.schedule) {
+        return json(409, 'Dein Jahresabo geht in den nächsten Tagen in ein Monatsabo über. Danach kannst du den Tarif wieder wechseln.')
+      }
       const portal = await stripe.billingPortal.sessions.create({
         customer: profile.stripe_customer_id,
         return_url: returnUrl,

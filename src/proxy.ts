@@ -1,4 +1,5 @@
-import type { NextRequest } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
+import { EDITOR_ENABLED, editorRedirect } from '@/lib/features'
 import { updateSession } from '@/lib/supabase/proxy'
 
 /**
@@ -6,6 +7,10 @@ import { updateSession } from '@/lib/supabase/proxy'
  * Die Edge-Runtime wird hier nicht mehr unterstützt — Proxy läuft auf Node.
  */
 export async function proxy(request: NextRequest) {
+  // Editor abgeschaltet (siehe `lib/features.ts`): auch direkt aufgerufene
+  // oder gemerkte Editor-Adressen kommen nicht mehr hinein.
+  const editorTarget = EDITOR_ENABLED ? null : editorRedirect(request.nextUrl.pathname)
+  if (editorTarget) return NextResponse.redirect(new URL(editorTarget, request.url))
   return updateSession(request)
 }
 

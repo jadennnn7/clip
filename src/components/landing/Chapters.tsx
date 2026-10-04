@@ -18,12 +18,12 @@ import { cn } from '@/lib/utils'
  */
 export const CHAPTERS = [
   { id: 'intro', label: 'Intro', start: 0 },
-  { id: 'beispiele', label: 'Beispiele', start: 36 * 60 + 26 },
-  { id: 'funktionen', label: 'Funktionen', start: 39 * 60 + 48 },
-  { id: 'fuer-wen', label: 'Für wen', start: 45 * 60 + 20 },
-  { id: 'preise', label: 'Preise', start: 48 * 60 + 27 },
-  { id: 'faq', label: 'FAQ', start: 53 * 60 + 23 },
-  { id: 'start', label: 'Loslegen', start: 56 * 60 + 4 },
+  { id: 'beispiele', label: 'Beispiele', start: 24 * 60 + 57 },
+  { id: 'funktionen', label: 'Funktionen', start: 30 * 60 + 6 },
+  { id: 'fuer-wen', label: 'Für wen', start: 39 * 60 + 5 },
+  { id: 'preise', label: 'Preise', start: 43 * 60 + 49 },
+  { id: 'faq', label: 'FAQ', start: 50 * 60 + 42 },
+  { id: 'start', label: 'Loslegen', start: 54 * 60 + 48 },
 ] as const
 
 export type ChapterId = (typeof CHAPTERS)[number]['id']

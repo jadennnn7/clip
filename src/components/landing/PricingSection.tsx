@@ -4,9 +4,11 @@ import React from 'react'
 import Link from 'next/link'
 import { CheckCheck, Clock, Coins, Download, Link2 } from 'lucide-react'
 import { MotionConfig } from 'motion/react'
+import NumberFlow from '@number-flow/react'
 import { CaptionMark } from '@/components/landing/CaptionMark'
 import { ChapterMarker } from '@/components/landing/Chapters'
 import { Button } from '@/components/ui/button'
+import { BillingIntervalSwitch } from '@/components/ui/billing-interval-switch'
 import {
   CREDIT_PACKS,
   FEATURED_TIER,
@@ -15,6 +17,10 @@ import {
   ROLLOVER_NOTE,
   TRIAL,
   videoTimeFor,
+  YEARLY_SAVING_PERCENT,
+  YEARLY_TERM_NOTE,
+  yearlyPerMonth,
+  type BillingInterval,
   type Plan,
 } from '@/lib/stripe/plans'
 import type { SubscriptionTier } from '@/types/database'
@@ -42,7 +48,10 @@ function gridArea(index: number, columns: number) {
 const stagger = (index: number) => ({ '--i': index }) as React.CSSProperties
 
 /**
- * Tarife aus `PLANS`, nur Monatspreise — einen Jahrestarif gibt es nicht.
+ * Tarife aus `PLANS`, monatlich oder jährlich. Die Wahl erscheint erst, wenn
+ * die Jahrespreise in Stripe eingerichtet sind (`yearlyAvailable`, vom
+ * Server); vorher bleibt es bei Monatspreisen. Monatlich ist vorgewählt —
+ * der Hero verspricht „Monatlich kündbar".
  *
  * Alles im Logo-Blau statt im Standard-Blau der Vorlage: Der empfohlene Tarif
  * hebt sich über echtes Glas mit blau aufleuchtender Kante und eine
@@ -52,8 +61,9 @@ const stagger = (index: number) => ({ '--i': index }) as React.CSSProperties
  * Die Karten unterscheiden sich nur in Credits und Kanälen — mehr trennt die
  * Tarife auch nicht. Was alle können, steht einmal darunter.
  */
-export function PricingSection() {
+export function PricingSection({ yearlyAvailable = false }: { yearlyAvailable?: boolean }) {
   const featuredIndex = PLANS.findIndex((plan) => plan.tier === FEATURED_TIER)
+  const [interval, setBillingInterval] = React.useState<BillingInterval>('month')
 
   return (
     <MotionConfig reducedMotion="user">
@@ -67,6 +77,17 @@ export function PricingSection() {
           Bezahlt wird, wie viel Video du verarbeiten lässt: 1 Credit pro Minute. Die Clips daraus,
           die Bearbeitung und die Exporte sind inklusive.
         </p>
+        {yearlyAvailable ? (
+          <div className="scroll-rise mt-8">
+            <BillingIntervalSwitch
+              value={interval}
+              onChange={setBillingInterval}
+              savingPercent={YEARLY_SAVING_PERCENT}
+              className="glass"
+              pillClassName="liquid-brand"
+            />
+          </div>
+        ) : null}
       </header>
 
       <div className="relative mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -75,7 +96,7 @@ export function PricingSection() {
             der Karte, egal in welcher Spalte die gerade steht. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute -inset-10 -z-10 rounded-full bg-[radial-gradient(closest-side,rgb(111_186_253/0.24),transparent)] [grid-area:var(--at)] md:[grid-area:var(--at-md)] lg:[grid-area:var(--at-lg)]"
+          className="pointer-events-none absolute -inset-10 -z-10 rounded-full bg-[radial-gradient(closest-side,rgb(0_160_252/0.24),transparent)] [grid-area:var(--at)] md:[grid-area:var(--at-md)] lg:[grid-area:var(--at-lg)]"
           style={
             {
               '--at': gridArea(featuredIndex, 1),
@@ -89,6 +110,7 @@ export function PricingSection() {
           <PlanCard
             key={plan.tier}
             plan={plan}
+            interval={interval}
             featured={index === featuredIndex}
             style={stagger(index)}
           />
@@ -112,7 +134,8 @@ export function PricingSection() {
       </div>
 
       <p className="scroll-rise mx-auto mt-6 max-w-3xl text-center text-xs leading-relaxed text-pretty text-white/45">
-        Preise inklusive Umsatzsteuer. {ROLLOVER_NOTE} Mehr gebraucht? {PACK.label} für{' '}
+        Preise inklusive Umsatzsteuer.{interval === 'year' ? ` Jahrestarif: ${YEARLY_TERM_NOTE}` : ''}{' '}
+        {ROLLOVER_NOTE} Mehr gebraucht? {PACK.label} für{' '}
         {euro.format(PACK.price)}&nbsp;€ zusätzlich zum Abo — sie verfallen nicht.
       </p>
     </MotionConfig>
@@ -121,14 +144,17 @@ export function PricingSection() {
 
 function PlanCard({
   plan,
+  interval,
   featured,
   style,
 }: {
   plan: Plan
+  interval: BillingInterval
   featured: boolean
   style: React.CSSProperties
 }) {
   const trial = plan.priceEnv === null
+  const yearly = interval === 'year' && !trial
 
   const highlights = [
     { icon: Coins, text: `${euro.format(plan.credits)} Credits ${trial ? 'einmalig' : 'pro Monat'}` },
@@ -158,7 +184,7 @@ function PlanCard({
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-2xl font-semibold tracking-tight text-white">{plan.name}</h3>
         {featured ? (
-          <span className="rounded-full bg-brand px-2.5 py-0.5 text-[0.6875rem] font-semibold text-brand-ink shadow-[0_0_14px_-2px_rgb(111_186_253/0.7)]">
+          <span className="rounded-full bg-brand px-2.5 py-0.5 text-[0.6875rem] font-semibold text-brand-ink shadow-[0_0_14px_-2px_rgb(0_160_252/0.7)]">
             Empfohlen
           </span>
         ) : null}
@@ -166,13 +192,21 @@ function PlanCard({
       <p className="mt-2 min-h-[2.5rem] text-sm leading-snug text-pretty text-white/55">{plan.audience}</p>
 
       <p className="mt-5 flex items-baseline gap-1.5">
-        <span className="text-4xl leading-none font-semibold tracking-[-0.03em] text-white tabular-nums">
-          {euro.format(plan.priceMonthly)}&nbsp;€
-        </span>
+        {/* Beim Umschalten rollt der Preis zur neuen Zahl, statt zu springen. */}
+        <NumberFlow
+          value={yearly ? yearlyPerMonth(plan) : plan.priceMonthly}
+          locales="de-DE"
+          suffix={' €'}
+          className="text-4xl leading-none font-semibold tracking-[-0.03em] text-white tabular-nums"
+        />
         <span className="text-sm text-white/55">{trial ? 'zum Testen' : '/ Monat'}</span>
       </p>
       <p className="mt-2 h-4 text-xs text-white/45">
-        {trial ? 'Einmalig, ohne Kreditkarte' : 'Monatlich kündbar'}
+        {trial
+          ? 'Einmalig, ohne Kreditkarte'
+          : yearly
+            ? `${euro.format(plan.priceYearly)} € im Jahr · du sparst ${euro.format(plan.priceMonthly * 12 - plan.priceYearly)} €`
+            : 'Monatlich kündbar'}
       </p>
 
       <Button

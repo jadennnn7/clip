@@ -35,10 +35,10 @@ export function AccountSettings({ account }: { account: Account | null }) {
 
         {account ? (
           <div className="space-y-6">
-            <Card className="shadow-xs">
+            <Card>
               <CardHeader>
                 <CardTitle className="text-base">Anmeldung</CardTitle>
-                <CardDescription>Clyp schickt dir zum Anmelden einen Link an diese Adresse.</CardDescription>
+                <CardDescription>Ocuris schickt dir zum Anmelden einen Link an diese Adresse.</CardDescription>
               </CardHeader>
               <CardContent>
                 <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-[8rem_1fr]">
@@ -54,7 +54,7 @@ export function AccountSettings({ account }: { account: Account | null }) {
               </CardContent>
             </Card>
 
-            <Card className="shadow-xs">
+            <Card>
               <CardHeader>
                 <CardTitle className="text-base">Konto löschen</CardTitle>
                 <CardDescription>
@@ -77,7 +77,7 @@ export function AccountSettings({ account }: { account: Account | null }) {
             </Card>
           </div>
         ) : (
-          <Card className="shadow-xs">
+          <Card>
             <CardHeader>
               <CardTitle className="text-base">Demo-Modus</CardTitle>
               <CardDescription>

@@ -114,7 +114,7 @@ export function PublishPanel({ clip, project, removedWords, outputFormat, onBack
           type="button"
           onClick={onBack}
           aria-label="Zurück zur Vorschau"
-          className="flex size-8 shrink-0 items-center justify-center rounded-full text-white/55 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+          className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-foreground/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
         >
           <ArrowLeft className="size-4" />
         </button>
@@ -123,7 +123,7 @@ export function PublishPanel({ clip, project, removedWords, outputFormat, onBack
           type="button"
           onClick={onClose}
           aria-label="Vorschau schließen"
-          className="flex size-8 shrink-0 items-center justify-center rounded-full text-white/55 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+          className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-foreground/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
         >
           <X className="size-4" />
         </button>
@@ -163,7 +163,7 @@ export function PublishPanel({ clip, project, removedWords, outputFormat, onBack
                       <span
                         className={cn(
                           'flex size-5 shrink-0 items-center justify-center rounded-full ring-1 transition',
-                          on ? 'bg-white text-zinc-950 ring-white' : 'ring-white/25',
+                          on ? 'bg-primary text-primary-foreground ring-primary' : 'ring-foreground/25',
                         )}
                       >
                         {on ? <Check className="size-3" strokeWidth={3} /> : null}
@@ -174,11 +174,11 @@ export function PublishPanel({ clip, project, removedWords, outputFormat, onBack
               })}
             </ul>
           ) : connection.loading ? (
-            <p className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-white/10 px-4 py-5 text-xs text-white/45">
+            <p className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-border px-4 py-5 text-xs text-white/45">
               <Loader2 className="size-3.5 animate-spin" /> Kanäle werden geladen …
             </p>
           ) : (
-            <div className="rounded-xl border border-dashed border-white/10 px-4 py-5 text-center text-xs leading-relaxed text-white/45">
+            <div className="rounded-xl border border-dashed border-border px-4 py-5 text-center text-xs leading-relaxed text-white/45">
               <p>{setupError ?? 'Noch kein Kanal verbunden.'}</p>
               {setupError ? null : (
                 <Link href="/dashboard/connections" className="mt-2 inline-block font-medium text-white underline decoration-white/30 underline-offset-4 hover:decoration-white">
@@ -215,7 +215,7 @@ export function PublishPanel({ clip, project, removedWords, outputFormat, onBack
               value={at}
               min={toLocalInput(new Date(openedAt))}
               onChange={(event) => setAt(event.target.value)}
-              className="mt-2 w-full rounded-xl border border-white/10 bg-white/[.04] px-3 py-2 text-sm text-white [color-scheme:dark] outline-none focus-visible:border-white/30"
+              className="mt-2 w-full glass-field rounded-xl px-3 py-2 text-sm text-foreground [color-scheme:dark] outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
             />
           ) : null}
           {inPast ? <p className="mt-1.5 text-xs text-amber-400">Der Zeitpunkt liegt in der Vergangenheit.</p> : null}
@@ -232,22 +232,22 @@ export function PublishPanel({ clip, project, removedWords, outputFormat, onBack
             maxLength={2200}
             rows={5}
             onChange={(event) => setCaption(event.target.value)}
-            className="w-full resize-none rounded-xl border border-white/10 bg-white/[.04] px-3 py-2.5 text-sm leading-relaxed text-white placeholder:text-white/30 outline-none focus-visible:border-white/30"
+            className="w-full resize-none glass-field rounded-xl px-3 py-2.5 text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/70 outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
             placeholder="Was soll unter dem Clip stehen?"
           />
         </section>
       </div>
 
-      <footer className="border-t border-white/[.06] bg-[#131313] px-6 py-5 max-lg:sticky max-lg:bottom-0">
+      <footer className="border-t border-border bg-background px-6 py-5 max-lg:sticky max-lg:bottom-0">
         <button
           type="button"
           onClick={() => { void submit() }}
           disabled={!ready}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#131313]"
+          className="liquid flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white transition-[transform,filter] duration-500 ease-spring hover:brightness-110 active:scale-[0.98] active:duration-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           {submitting ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
           {when === 'now' ? 'Jetzt veröffentlichen' : 'Einplanen'}
-          {chosen.length > 1 ? <span className="font-normal text-zinc-500">· {chosen.length} Kanäle</span> : null}
+          {chosen.length > 1 ? <span className="font-normal opacity-75">· {chosen.length} Kanäle</span> : null}
         </button>
         <p className="mt-2.5 text-center text-[11px] leading-relaxed text-white/40">
           Veröffentlicht wird der Clip so, wie er gerade bearbeitet ist.

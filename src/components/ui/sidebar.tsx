@@ -296,7 +296,7 @@ const sidebarRowClasses =
 /**
  * Aktive Zeile. Die Fläche dahinter gleitet als Linse von Zeile zu Zeile.
  */
-const sidebarRowActiveClasses = 'font-medium text-sidebar-foreground hover:bg-transparent'
+const sidebarRowActiveClasses = 'z-10 font-medium text-sidebar-foreground hover:bg-transparent'
 
 /** Federt leicht nach — wie im Dock. */
 const LENS_SPRING = { type: 'spring', stiffness: 320, damping: 24 } as const
@@ -386,7 +386,7 @@ function SidebarLink({
         onFocus={() => setHovered(true)}
         onBlur={() => setHovered(false)}
         // Den Hover-Grund liefert die Linse, nicht die Zeile selbst.
-        className={cn(sidebarRowClasses, 'relative hover:bg-transparent', active && sidebarRowActiveClasses, className)}
+        className={cn(sidebarRowClasses, 'relative isolate hover:bg-transparent', active && sidebarRowActiveClasses, className)}
         {...props}
       >
         {active ? <SidebarLens /> : null}

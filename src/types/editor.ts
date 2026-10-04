@@ -42,12 +42,12 @@ export type ClipCompositionProps = {
   overlays?: Overlay[]
   video?: VideoSettings | null
   /**
-   * Clyp-Wasserzeichen im Gratis-Tarif. Beim Export entscheidet der Server
+   * Ocuris-Wasserzeichen im Gratis-Tarif. Beim Export entscheidet der Server
    * (`needsWatermark`), nie der Browser.
    */
   watermark?: boolean
   /**
-   * Mit Wasserzeichen hängt ein schwarzer Abspann „Made with Clyp" am Clip
+   * Mit Wasserzeichen hängt ein schwarzer Abspann „Made with Ocuris" am Clip
    * (`OUTRO_SECONDS`). `false` nur im Editor: Dessen Timeline endet am Clip.
    */
   outro?: boolean

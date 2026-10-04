@@ -13,10 +13,10 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
   return (
     <html lang="de">
       <body style={{ margin: 0, fontFamily: 'system-ui, -apple-system, sans-serif', colorScheme: 'light dark' }}>
-        <title>Fehler — Clyp</title>
+        <title>Fehler — Ocuris</title>
         <main style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4rem 1rem', textAlign: 'center' }}>
           <p style={{ margin: 0, fontFamily: 'ui-monospace, monospace', fontSize: 14, color: '#1670d6' }}>Fehler</p>
-          <h1 style={{ margin: '12px 0 0', fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em' }}>Clyp konnte nicht geladen werden</h1>
+          <h1 style={{ margin: '12px 0 0', fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em' }}>Ocuris konnte nicht geladen werden</h1>
           <p style={{ margin: '12px 0 0', maxWidth: 420, fontSize: 14, lineHeight: 1.6, opacity: 0.7 }}>
             Versuch es gleich noch einmal. Bleibt der Fehler, nenne dem Support die Fehler-ID.
           </p>

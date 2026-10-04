@@ -3,7 +3,7 @@ import { AbsoluteFill, Img, useVideoConfig } from 'remotion'
 import { WATERMARK_LOGO } from './watermark-logo'
 
 /**
- * Wasserzeichen im Gratis-Tarif: Clyp-Zeichen und „Made with Clyp" oben
+ * Wasserzeichen im Gratis-Tarif: Ocuris-Zeichen und „Made with Ocuris" oben
  * rechts. Am Ende folgt der Abspann (`Outro.tsx`).
  *
  * Oben rechts, knapp unter der Kopfzeile der Apps (die strengste endet bei
@@ -47,7 +47,7 @@ export const Watermark: React.FC = () => {
           <span style={{ fontWeight: 500, fontSize: 32 * unit, letterSpacing: '-0.005em', color: 'rgba(255, 255, 255, 0.78)' }}>
             Made with
           </span>
-          <span style={{ fontWeight: 700, fontSize: 40 * unit, letterSpacing: '-0.03em', color: '#FFFFFF' }}>Clyp</span>
+          <span style={{ fontWeight: 700, fontSize: 40 * unit, letterSpacing: '-0.03em', color: '#FFFFFF' }}>Ocuris</span>
         </span>
       </div>
     </AbsoluteFill>

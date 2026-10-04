@@ -2,7 +2,7 @@
  * Was Sentry mitschicken darf: nur der Fehler selbst mit Stacktrace.
  *
  * Seit SDK 11 sammelt Sentry standardmäßig Cookies, Header, Request-Bodies,
- * Nutzerdaten und lokale Variablen — bei Clyp wären das Session-Cookies,
+ * Nutzerdaten und lokale Variablen — bei Ocuris wären das Session-Cookies,
  * OAuth-Tokens und Transkripte. Alles davon bleibt aus, ebenso
  * Performance-Traces.
  */

@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import { LOGO } from '@/lib/logo'
 import { cn } from '@/lib/utils'
 
 /**
@@ -15,25 +16,41 @@ import { cn } from '@/lib/utils'
 export function BrandMark({
   className,
   eager = false,
+  large = false,
 }: {
   className?: string
   /** Nur in der Navbar: Dort ist das Logo das Erste, was man sieht. */
   eager?: boolean
+  /** Navbar: Zeichen und Wortmarke eine Stufe größer als in der Fußzeile. */
+  large?: boolean
 }) {
+  const px = large ? 36 : 28
   return (
-    <span className={cn('flex items-center gap-2', className)}>
-      <span className="relative size-7 shrink-0 overflow-hidden">
+    <span
+      className={cn('flex items-center', large ? 'gap-1' : 'gap-2', className)}
+    >
+      <span
+        className={cn(
+          'relative shrink-0 overflow-hidden',
+          large ? 'size-9' : 'size-7',
+        )}
+      >
         <Image
-          src="/Logo.png"
+          src={LOGO}
           alt=""
-          width={28}
-          height={28}
+          width={px}
+          height={px}
           loading={eager ? 'eager' : 'lazy'}
-          className="size-7 scale-[1.45] object-contain"
+          className="size-full scale-[1.45] object-contain"
         />
       </span>
-      <span className="font-display text-[17px] font-semibold tracking-tight">
-        Clyp
+      <span
+        className={cn(
+          'font-display font-semibold tracking-tight',
+          large ? 'text-[20px]' : 'text-[17px]',
+        )}
+      >
+        Ocuris
       </span>
     </span>
   )

@@ -436,6 +436,9 @@
                      das Material darunter (Cover, Video) immer dunkel ist.
    - `.glass-menu`   Popover und Menüs. Dichter als `.glass`, weil dort Text
                      über beliebigem Inhalt sicher lesbar bleiben muss.
+   - `.control`      Kleine Bedienelemente auf Grund oder Karte: Umschalter,
+                     Icon-Knöpfe, Filter, Suchfelder. Leicht getönt mit
+                     Haarlinie, beim Überfahren dichter.
    - `.liquid`       Die gefüllte Hauptaktion: ein Tropfen im Blau des Logos
                      (im Hellen tiefer), mit Meniskus — statt einer Fläche.
    - `.liquid-press` Glasknöpfe quellen beim Drücken auf und federn zurück.
@@ -445,6 +448,20 @@
      `backdrop-filter` — was unter der Kante durchläuft, verbiegt sich.
    - Kaustik: Unter jeder Fläche liegt im Schatten ein schmaler Lichtstreif —
      das Licht, das durch das Glas fällt und dahinter gebündelt wird.
+
+   Regeln, damit jede Seite der App gleich aussieht:
+   - Karten im Inhalt sind `.glass-tile rounded-2xl` (16 px) mit `p-5`, ab sm
+     `p-6`. Elemente in Karten `rounded-xl` (12 px), kleine Teile wie Chips
+     und Icon-Knöpfe `rounded-lg` (8 px). Keine anderen Radien.
+   - Die Seite selbst hat keinen eigenen Hintergrund — der Grund ist
+     `.ambient` aus dem Layout. Seitenrand `px-4 py-10 sm:px-6`, die Breite
+     nach Inhalt (Formulare schmal, Raster breit).
+   - Farben nur aus dem Theme: `text-foreground`, `text-muted-foreground`,
+     `border-border`, Tönungen über `foreground/[…]`, Akzent `primary`.
+     Keine festen Grautöne (`zinc-*`, `#141519` …): Sie weichen vom Grund
+     ab und brechen den hellen Modus.
+   - Weiß und Schwarz nur über Bildmaterial (Cover, Video) — dort ist es
+     immer dunkel, wie bei `.glass-chip`.
    =========================================================================== */
 
 @property --glass-refraction {
@@ -838,6 +855,20 @@
     box-shadow: var(--glass-field-shadow);
   }
 
+  /* Kleine Bedienelemente: getönt aus der Schriftfarbe, damit sie in beiden
+     Modi und auf Grund wie Karte gleich zurückhaltend wirken. */
+  .control {
+    background-color: color-mix(in oklab, var(--foreground) 4%, transparent);
+    box-shadow: inset 0 0 0 1px var(--border);
+    color: color-mix(in oklab, var(--foreground) 75%, transparent);
+    transition: background-color 150ms var(--ease-out-quint), color 150ms var(--ease-out-quint);
+  }
+
+  .control:hover {
+    background-color: color-mix(in oklab, var(--foreground) 8%, transparent);
+    color: var(--foreground);
+  }
+
   .glass-chip {
     background: rgb(0 0 0 / 0.38);
     color: white;
@@ -1151,32 +1182,49 @@
   scroll-behavior: smooth;
 }
 
+/* Landing: nur die Farbe des Logos (2026-10-04, „mach bitte die farben nur
+   von mein logo keine akzente“). Jedes Blau der Startseite ist das eine
+   Logo-Blau aus `/Logo.png`, rgb(0 160 252); abgestuft wird nur über
+   Deckkraft, nie über einen anderen Ton — kein Hellblau, kein Tiefblau, kein
+   Verlauf zwischen Blautönen, kein Grün. Daneben nur Schwarz, Grau, Weiß.
+   App und Anmeldeseiten behalten ihre Töne. Steht nach `.dark`, weil beide
+   am selben Element hängen und die spätere Regel gewinnt. */
+.landing-root {
+  --color-brand: #00a0fc;
+  --color-brand-light: #00a0fc;
+  --color-brand-deep: #00a0fc;
+  --primary: #00a0fc;
+  --ring: #00a0fc;
+  --brand-glow: rgb(0 160 252 / 0.24);
+}
+
 /* Der hervorgehobene Tarif: dasselbe `.glass`, nur mit dichterer Füllung und
    einer Kante, die oben links im Logo-Blau aufleuchtet. */
 .landing-featured {
-  --glass-fill: linear-gradient(180deg, rgb(4 157 255 / 0.12), rgb(255 255 255 / 0.04));
+  --glass-fill: linear-gradient(180deg, rgb(0 160 252 / 0.12), rgb(255 255 255 / 0.04));
   --glass-rim: linear-gradient(
     150deg,
-    rgb(203 233 255 / 0.75),
-    rgb(4 157 255 / 0.28) 30%,
+    rgb(0 160 252 / 0.75),
+    rgb(0 160 252 / 0.28) 30%,
     rgb(255 255 255 / 0.05) 62%,
     rgb(255 255 255 / 0.08) 85%,
-    rgb(4 157 255 / 0.4)
+    rgb(0 160 252 / 0.4)
   );
 }
 
-/* Der Tropfen in Logo-Blau: dieselbe `.liquid`-Form, nur mit anderer Füllung.
+/* Der Tropfen in Logo-Blau — genau dem Ton des Logos, ohne Verlauf in
+   hellere oder dunklere Blaus: dieselbe `.liquid`-Form, nur mit anderer Füllung.
    Gesetzt werden die Variablen, nicht `background` — so bleiben Meniskus,
    Hover und Druckzustand von `.liquid` unverändert. */
 .liquid-brand {
-  --liquid-fill: radial-gradient(120% 100% at 50% 125%, rgb(4 22 43 / 0.2), transparent 60%),
-    linear-gradient(180deg, #45bcff, #049dff 55%, #008ef0);
+  --liquid-fill: radial-gradient(120% 100% at 50% 125%, rgb(0 0 0 / 0.16), transparent 60%),
+    linear-gradient(#00a0fc, #00a0fc);
   /* Weiß wie die Untertitel-Marke; der feine Schatten trägt die Schrift
      über das helle Blau oben im Tropfen. */
   --liquid-fg: #fff;
-  --liquid-text-shadow: 0 1px 1.5px rgb(4 22 43 / 0.45);
-  --liquid-shadow: inset 0 1px 0 rgb(255 255 255 / 0.5), inset 0 -1px 0 rgb(4 22 43 / 0.3),
-    0 1px 2px rgb(0 0 0 / 0.4), 0 10px 28px -8px rgb(4 157 255 / 0.55);
+  --liquid-text-shadow: 0 1px 1.5px rgb(0 0 0 / 0.35);
+  --liquid-shadow: inset 0 1px 0 rgb(255 255 255 / 0.5), inset 0 -1px 0 rgb(0 0 0 / 0.25),
+    0 1px 2px rgb(0 0 0 / 0.4), 0 10px 28px -8px rgb(0 160 252 / 0.55);
 }
 
 /* ---------------------------------------------------------------------------
@@ -1755,7 +1803,7 @@
     pointer-events: none;
     background: radial-gradient(
       26rem circle at var(--mx, 50%) var(--my, 50%),
-      rgb(4 157 255 / calc(0.12 * var(--lit))),
+      rgb(0 160 252 / calc(0.12 * var(--lit))),
       transparent 70%
     );
   }
@@ -1764,7 +1812,7 @@
     background:
       radial-gradient(
         13rem circle at var(--mx, 50%) var(--my, 50%),
-        rgb(170 212 255 / calc(0.9 * var(--lit))),
+        rgb(0 160 252 / calc(0.9 * var(--lit))),
         transparent 70%
       ),
       var(--glass-rim);
@@ -1774,7 +1822,7 @@
     background:
       radial-gradient(
         13rem circle at var(--mx, 50%) var(--my, 50%),
-        rgb(170 212 255 / calc(0.9 * var(--lit))),
+        rgb(0 160 252 / calc(0.9 * var(--lit))),
         transparent 70%
       ),
       var(--glass-tile-rim, var(--glass-rim));
@@ -1792,8 +1840,8 @@
     border-radius: 9999px;
     background: radial-gradient(
       closest-side,
-      rgb(4 157 255 / 0.16),
-      rgb(0 128 230 / 0.06) 55%,
+      rgb(0 160 252 / 0.16),
+      rgb(0 160 252 / 0.06) 55%,
       transparent
     );
     translate: var(--hx, 50vw) var(--hy, 20rem);
@@ -2050,7 +2098,7 @@
   translate: 0 0;
 }
 
-/* Tonspur-Pegel: im Zeichen und in „Clyp sucht die Antwort“. */
+/* Tonspur-Pegel: im Zeichen und in „Ocuris sucht die Antwort“. */
 @keyframes support-level {
   0%, 100% { transform: scaleY(1); }
   50% { transform: scaleY(0.4); }
@@ -2121,4 +2169,67 @@ body:has(.support-shell) [data-sonner-toaster][data-y-position='bottom'][data-x-
   .support-shell .support-glyph-bar {
     animation: none !important;
   }
+}
+
+/* ---------------------------------------------------------------------------
+   Hero: Horizontlinie
+   ---------------------------------------------------------------------------
+   Ein dunkler Planet, viel breiter als das Fenster, dessen Rand knapp unter
+   der Belegzeile als feine Linie in Logo-Blau verläuft, in der Mitte heller.
+   Ohne Lichtschein, ohne Sonne („mach das licht bei mir weg“). Zwei Ebenen in
+   `.hero-sky`: der Planet (`.hero-horizon`) und der hellere Rand in der Mitte
+   (`.hero-rim`). Breite und Ränder in Pixeln, nicht in Prozent: Sonst würde
+   die Randlinie mit dem Planeten breiter. Beim Laden hebt sich der Planet
+   einmal; danach steht alles. */
+.hero-sky {
+  --horizon-y: calc(100svh - 7rem);
+  --planet: clamp(1100px, 230vw, 4400px);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.hero-horizon,
+.hero-rim {
+  position: absolute;
+  top: var(--horizon-y);
+  left: 50%;
+  width: var(--planet);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.hero-horizon {
+  background: radial-gradient(
+    closest-side,
+    #000 calc(100% - 22px),
+    #000a0f calc(100% - 4px),
+    #004a75 calc(100% - 1px),
+    #0080ca 100%
+  );
+}
+
+.hero-rim {
+  background: radial-gradient(
+    closest-side,
+    transparent calc(100% - 4px),
+    rgb(0 160 252 / 0.5) calc(100% - 2px),
+    rgb(0 160 252) 100%
+  );
+  -webkit-mask-image: radial-gradient(ellipse 21% 4.5% at 50% 0%, #000, rgb(0 0 0 / 0.45) 50%, transparent);
+  mask-image: radial-gradient(ellipse 21% 4.5% at 50% 0%, #000, rgb(0 0 0 / 0.45) 50%, transparent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hero-horizon,
+  .hero-rim {
+    animation: horizon-rise 2s var(--ease-out-quint) both;
+  }
+}
+
+@keyframes horizon-rise {
+  from { transform: translate(-50%, 40px); }
+  to { transform: translate(-50%, 0); }
 }

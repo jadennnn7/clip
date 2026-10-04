@@ -40,10 +40,10 @@ export function AccountCard({ account, capability, onSave, onDisconnect }: Accou
   const canSave = changed && isHealthy && capability.configured && (mode !== 'auto_publish' || capability.canAutoPublish)
   const tiktok = account.platform === 'tiktok'
   const blockedReason = account.platform === 'youtube'
-    ? 'YouTube muss zuerst die App von Clyp freigeben. Das erledigt der Betreiber von Clyp; du kannst diese Freigabe nicht in deinem Kanal aktivieren. Bis dahin sind Uploads privat.'
+    ? 'YouTube muss zuerst die App von Ocuris freigeben. Das erledigt der Betreiber von Ocuris; du kannst diese Freigabe nicht in deinem Kanal aktivieren. Bis dahin sind Uploads privat.'
     : tiktok
       ? 'TikTok erlaubt in dieser Anbindung nur den Upload in deine Inbox. Den letzten Schritt zur Veröffentlichung erledigst du in TikTok.'
-      : 'Der Betreiber von Clyp muss zuerst die Instagram-Anbindung für öffentliche Veröffentlichungen freischalten. Du benötigst zusätzlich ein Instagram-Professional-Konto.'
+      : 'Der Betreiber von Ocuris muss zuerst die Instagram-Anbindung für öffentliche Veröffentlichungen freischalten. Du benötigst zusätzlich ein Instagram-Professional-Konto.'
 
   async function save() {
     setBusy('save')
@@ -58,7 +58,7 @@ export function AccountCard({ account, capability, onSave, onDisconnect }: Accou
   }
 
   return (
-    <article className="glass-tile flex flex-col gap-4 rounded-[1.25rem] p-5">
+    <article className="glass-tile flex flex-col gap-4 rounded-2xl p-5">
       <div className="flex items-center gap-3">
         <div className="relative shrink-0">
           {account.avatar_url ? (
@@ -119,7 +119,7 @@ export function AccountCard({ account, capability, onSave, onDisconnect }: Accou
               </span>
               <span className="min-w-0 flex-1">
                 <span className="flex flex-wrap items-center gap-1.5 text-sm font-medium"><option.icon className="size-3.5" />{AUTOMATION_LABEL[option.value]}{unavailable ? <span className="text-[10px] font-normal text-amber-700 dark:text-amber-400">Noch nicht verfügbar</span> : null}</span>
-                <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{option.value === 'auto_publish' ? 'Link einfügen → Clips erstellen → automatisch öffentlich posten.' : option.value === 'review_queue' ? tiktok ? 'Clips prüfen und freigeben. Anschließend in TikTok veröffentlichen.' : !capability.canAutoPublish ? 'Clips vorbereiten und einzeln freigeben. Plattformbeschränkungen gelten weiterhin.' : 'Clips prüfen und einmal freigeben. Clyp veröffentlicht sie danach.' : 'Clips erstellen und im Editor bearbeiten. Es wird nichts veröffentlicht.'}</span>
+                <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{option.value === 'auto_publish' ? 'Link einfügen → Clips erstellen → automatisch öffentlich posten.' : option.value === 'review_queue' ? tiktok ? 'Clips prüfen und freigeben. Anschließend in TikTok veröffentlichen.' : !capability.canAutoPublish ? 'Clips vorbereiten und einzeln freigeben. Plattformbeschränkungen gelten weiterhin.' : 'Clips prüfen und einmal freigeben. Ocuris veröffentlicht sie danach.' : 'Clips erstellen und im Editor bearbeiten. Es wird nichts veröffentlicht.'}</span>
               </span>
             </label>
           )
@@ -145,7 +145,7 @@ export function AccountCard({ account, capability, onSave, onDisconnect }: Accou
         </div>
       ) : null}
 
-      {mode !== 'manual' ? <p className="text-xs leading-relaxed text-muted-foreground">Clyp plant die Clips mit 8 Stunden Abstand. Den genauen Zeitpunkt und Status siehst du bei jedem Clip und in der Veröffentlichungs-Queue.</p> : null}
+      {mode !== 'manual' ? <p className="text-xs leading-relaxed text-muted-foreground">Ocuris plant die Clips mit 8 Stunden Abstand. Den genauen Zeitpunkt und Status siehst du bei jedem Clip und in der Veröffentlichungs-Queue.</p> : null}
 
       {mode === 'auto_publish' && changed ? (
         <p className="rounded-xl bg-foreground/[0.04] p-3 text-xs leading-relaxed">Mit „Vollautomatisch aktivieren“ erlaubst du die automatische öffentliche Veröffentlichung neuer Clips auf diesem Kanal. Bereits eingeplante Clips bleiben unverändert.</p>

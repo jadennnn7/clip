@@ -64,7 +64,7 @@ export function IngestDialog() {
         <DialogHeader>
           <DialogTitle>Video hinzufügen</DialogTitle>
           <DialogDescription>
-            Clyp transkribiert das Video, sucht die stärksten Momente und schneidet sie
+            Ocuris transkribiert das Video, sucht die stärksten Momente und schneidet sie
             auf 9:16.
           </DialogDescription>
         </DialogHeader>

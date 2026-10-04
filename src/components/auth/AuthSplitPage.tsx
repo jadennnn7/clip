@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import { LOGO } from '@/lib/logo'
 import Link from 'next/link'
 import { AuthForm, type AuthIntent, type AuthNotice } from '@/components/auth/AuthForm'
 import { PublishingFeed } from '@/components/auth/PublishingFeed'
@@ -17,7 +18,7 @@ function BrandMark() {
     <span className="flex items-center gap-2">
       <span className="relative size-8 shrink-0 overflow-hidden">
         <Image
-          src="/Logo.png"
+          src={LOGO}
           alt=""
           width={32}
           height={32}
@@ -25,7 +26,7 @@ function BrandMark() {
           priority
         />
       </span>
-      <span className="font-display text-lg font-semibold tracking-tight">Clyp</span>
+      <span className="font-display text-lg font-semibold tracking-tight">Ocuris</span>
     </span>
   )
 }
@@ -37,14 +38,21 @@ function noticeFrom(params: AuthSearchParams): AuthNotice | null {
     return {
       tone: 'error',
       title: 'Link ungültig oder abgelaufen',
-      text: 'Fordere unten einen neuen Anmeldelink an. Es gilt immer nur der zuletzt gesendete Link.',
+      text: 'Melde dich mit deinem Passwort an oder fordere unten einen neuen Anmeldelink an. Es gilt immer nur der zuletzt gesendete Link.',
+    }
+  }
+  if (error === 'oauth_failed') {
+    return {
+      tone: 'error',
+      title: 'Anmeldung mit Google abgebrochen',
+      text: 'Versuche es noch einmal oder melde dich mit E-Mail und Passwort an.',
     }
   }
   if (error === 'oauth_session_expired' || error === 'oauth_origin_mismatch' || error === 'connection_failed') {
     return {
       tone: 'error',
       title: 'Bitte auf dieser Adresse anmelden',
-      text: 'Für die Kanalverbindung brauchst du eine Clyp-Anmeldung auf dieser Webadresse. Öffne den Link im selben Browser und verbinde den Kanal danach erneut.',
+      text: 'Für die Kanalverbindung brauchst du eine Ocuris-Anmeldung auf dieser Webadresse. Öffne den Link im selben Browser und verbinde den Kanal danach erneut.',
     }
   }
   if (error) {
@@ -129,7 +137,7 @@ export function AuthSplitPage({ intent, searchParams }: { intent: AuthIntent; se
               Deine Clips gehen raus, während du das nächste Video drehst.
             </p>
             <p className="mt-3 text-[15px] leading-6 text-pretty text-white/55">
-              Clyp verteilt deine Clips über die Woche und veröffentlicht sie —
+              Ocuris verteilt deine Clips über die Woche und veröffentlicht sie —
               oder legt sie dir vorher zur Freigabe vor.
             </p>
             <ul className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-white/60">
@@ -176,7 +184,7 @@ export function AuthSplitPage({ intent, searchParams }: { intent: AuthIntent; se
       </div>
 
       <footer className="text-center text-xs text-white/40">
-        © {new Date().getFullYear()} Clyp · Verarbeite nur Videos, an denen du die Rechte hältst.
+        © {new Date().getFullYear()} Ocuris · Verarbeite nur Videos, an denen du die Rechte hältst.
         <span className="mt-2 flex justify-center gap-4">
           <Link href="/impressum" className="rounded-sm underline-offset-4 outline-none hover:text-white hover:underline focus-visible:ring-2 focus-visible:ring-white/50">Impressum</Link>
           <Link href="/datenschutz" className="rounded-sm underline-offset-4 outline-none hover:text-white hover:underline focus-visible:ring-2 focus-visible:ring-white/50">Datenschutz</Link>

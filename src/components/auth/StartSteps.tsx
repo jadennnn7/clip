@@ -46,7 +46,7 @@ export function StartSteps({ className }: { className?: string }) {
           number={1}
           icon={<Mail className="size-4" />}
           title="Konto erstellen"
-          text="Name und E-Mail – ein Passwort brauchst du nicht."
+          text="Mit Google oder mit E-Mail und Passwort."
           active
         />
 

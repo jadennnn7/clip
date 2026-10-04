@@ -24,7 +24,7 @@ export function getPublishingStatus(job: PublishingJobSummary): { label: string;
     case 'rendering':
       return {
         label: 'Video wird vorbereitet',
-        detail: 'Clyp rendert den Clip für deinen Kanal. Anschließend folgt der Upload.',
+        detail: 'Ocuris rendert den Clip für deinen Kanal. Anschließend folgt der Upload.',
         className: 'text-blue-700 dark:text-blue-400',
       }
     case 'publishing':

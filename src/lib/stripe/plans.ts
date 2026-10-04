@@ -19,18 +19,26 @@ import type { SubscriptionTier } from '@/types/database'
  * `profiles.plan_credits` — ändert es sich, braucht die Spalte eine Migration.
  */
 
+export type BillingInterval = 'month' | 'year'
+
 export interface Plan {
   tier: SubscriptionTier
   name: string
   /** Für wen der Tarif gedacht ist — eine Zeile unter dem Namen. */
   audience: string
-  /** Nur monatliche Abos — einen Jahrestarif gibt es nicht. */
   priceMonthly: number
+  /**
+   * Jahrespreis, einmal im Jahr abgerechnet. Credits gibt es trotzdem
+   * monatlich (`settle_credit_cycles` schreibt sie über die ganze Periode
+   * gut), sonst wäre der Übertrag-Deckel sinnlos.
+   */
+  priceYearly: number
   /** Credits pro Monat; im Gratis-Test einmalig. */
   credits: number
   socialAccounts: number
   /** Server-Umgebungsvariable mit der Stripe-Preis-ID. */
   priceEnv: string | null
+  yearlyPriceEnv: string | null
 }
 
 /**
@@ -40,44 +48,90 @@ export interface Plan {
  */
 export const TRIAL = { credits: 120, exports: 3 } as const
 
+/*
+ * Jahrespreise: rund 20 % unter zwölf Monatsbeiträgen, auf glatte
+ * Monatsbeträge gerundet (15 / 31 / 79 €). Jeder Tarif spart mindestens
+ * 20 %, „20 % sparen" stimmt also überall.
+ *
+ * Warum nicht 40–50 % wie OpusClip, Vizard oder Submagic: Deren Monatspreis
+ * ist ein aufgeblasener Anker, der eigentliche Preis ist der Jahrespreis.
+ * Unsere Monatspreise sind schon knapp kalkuliert, und jede Minute kostet
+ * Transkription, KI und Render — bei 50 % hätte der Business-Tarif kaum
+ * noch Marge, und Credit-Pakete wären fast viermal so teuer wie Abo-Credits.
+ * Weniger als „2 Monate geschenkt" (16,7 %) wäre dagegen kein Grund zu
+ * wechseln.
+ */
 export const PLANS: Plan[] = [
   {
     tier: 'free',
     name: 'Free',
     audience: 'Einmal ausprobieren, ohne Kreditkarte.',
     priceMonthly: 0,
+    priceYearly: 0,
     credits: TRIAL.credits,
     socialAccounts: 1,
     priceEnv: null,
+    yearlyPriceEnv: null,
   },
   {
     tier: 'starter',
     name: 'Starter',
     audience: 'Für gelegentliche Creator.',
     priceMonthly: 19,
+    priceYearly: 180,
     credits: 150,
     socialAccounts: 3,
     priceEnv: 'STRIPE_PRICE_STARTER_MONTHLY',
+    yearlyPriceEnv: 'STRIPE_PRICE_STARTER_YEARLY',
   },
   {
     tier: 'pro',
     name: 'Creator',
     audience: 'Für Creator, die regelmäßig veröffentlichen.',
     priceMonthly: 39,
+    priceYearly: 372,
     credits: 450,
     socialAccounts: 9,
     priceEnv: 'STRIPE_PRICE_CREATOR_MONTHLY',
+    yearlyPriceEnv: 'STRIPE_PRICE_CREATOR_YEARLY',
   },
   {
     tier: 'agency',
     name: 'Business',
     audience: 'Für mehrere Marken oder Kunden.',
     priceMonthly: 99,
+    priceYearly: 948,
     credits: 1200,
     socialAccounts: 30,
     priceEnv: 'STRIPE_PRICE_BUSINESS_MONTHLY',
+    yearlyPriceEnv: 'STRIPE_PRICE_BUSINESS_YEARLY',
   },
 ]
+
+/** Was ein Jahrestarif umgerechnet im Monat kostet. */
+export function yearlyPerMonth(plan: Plan): number {
+  return plan.priceYearly / 12
+}
+
+/** Die kleinste Ersparnis über alle Tarife, abgerundet — so stimmt die Zahl für jeden. */
+export const YEARLY_SAVING_PERCENT = Math.floor(
+  Math.min(
+    ...PLANS.filter((plan) => plan.priceMonthly > 0).map((plan) => (1 - plan.priceYearly / (plan.priceMonthly * 12)) * 100),
+  ),
+)
+
+/**
+ * Laufzeit des Jahrestarifs. Nach dem ersten Jahr läuft das Abo monatlich
+ * weiter statt sich um ein Jahr zu verlängern — bei Verbrauchern darf eine
+ * stillschweigende Verlängerung nur noch auf unbestimmte Zeit mit
+ * monatlicher Kündigung erfolgen (§ 309 Nr. 9 BGB). Siehe Stripe-Webhook,
+ * `invoice.upcoming`.
+ */
+export const YEARLY_TERM_NOTE = '12 Monate Laufzeit, danach monatlich kündbar.'
+
+export function priceEnvFor(plan: Plan, interval: BillingInterval): string | null {
+  return interval === 'year' ? plan.yearlyPriceEnv : plan.priceEnv
+}
 
 /** Das Hauptangebot, das Landing-Page und Aufladen-Dialog hervorheben. */
 export const FEATURED_TIER: SubscriptionTier = 'pro'

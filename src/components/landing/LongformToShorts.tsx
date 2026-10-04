@@ -648,13 +648,14 @@ const SCRUB_CSS = [
   // sich nur innerhalb der Inhaltsbox seines Elternteils. Mit Untergrenze in
   // Pixeln: Nur in `svh` gerechnet wurde sie in kleinen Fenstern so kurz,
   // dass die ganze Verwandlung in fünf Rasten des Mausrads vorbei war.
-  `.lts-scrub::after{content:'';display:block;height:max(275svh,2100px)}`,
+  `.lts-scrub::after{content:'';display:block;height:max(160svh,1300px)}`,
   `@media (min-width:40rem){.lts-scrub{--lts-w:min(56rem,100vw - 3rem,(100svh - 10rem)*1.3)}}`,
   // Mit dem Mausrad länger als mit dem Finger: Ein Wisch trägt weit, eine
   // Raste nur rund 100 px — und die Verwandlung soll über viele Rasten gehen.
-  // Mit dem vierten Akt um ein Viertel länger als vorher, damit die ersten
-  // drei nicht schneller vorbeiziehen.
-  `@media (min-width:64rem),(hover:hover) and (pointer:fine){.lts-scrub::after{height:max(440svh,3500px)}}`,
+  // Nicht länger: Mit über vier Fenstern Strecke (440svh) war der Hero gut
+  // sechs Bildschirme hoch, und die meisten davon zeigten fast nur Schwarz —
+  // es sah aus, als hinge die Seite. So bleiben rund vier Rasten pro Akt.
+  `@media (min-width:64rem),(hover:hover) and (pointer:fine){.lts-scrub::after{height:max(240svh,2100px)}}`,
   `.lts-pin{position:sticky;top:calc(4rem + (100svh - 4rem - var(--lts-w)*${STAGE_H / 100} - 3.5rem)/2);width:min(100%,var(--lts-w));margin-inline:auto}`,
   `${SCRUBBED}{animation-timeline:--lts!important;animation-iteration-count:1!important;animation-fill-mode:both!important;animation-range:${SCRUB_RANGE}!important}`,
   // Mit `SmoothScrub`: dieselben Keyframes, aber angehalten und eine Sekunde
@@ -739,7 +740,7 @@ export function LongformToShorts({ className, style }: { className?: string; sty
             schneidet es ab (`overflow-x: clip` an der Wurzel). */}
         <div
           aria-hidden
-          className="lts-glow pointer-events-none absolute left-1/2 -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgb(111_186_253/0.2),rgb(36_147_255/0.06)_60%,transparent)]"
+          className="lts-glow pointer-events-none absolute left-1/2 -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgb(0_160_252/0.2),rgb(0_160_252/0.06)_60%,transparent)]"
           style={{ top: '30cqw', width: '120cqw', height: '62cqw', animationName: 'lts-glow' }}
         />
         <div
@@ -795,7 +796,7 @@ export function LongformToShorts({ className, style }: { className?: string; sty
                 ...run(`lts-slot${j}`),
               }}
             >
-              <span className="absolute inset-x-0 bottom-0 h-2/3 bg-[radial-gradient(70%_80%_at_50%_100%,rgb(111_186_253/0.22),transparent)]" />
+              <span className="absolute inset-x-0 bottom-0 h-2/3 bg-[radial-gradient(70%_80%_at_50%_100%,rgb(0_160_252/0.22),transparent)]" />
               <span className="relative font-mono tracking-[0.08em] text-white/45 uppercase @max-[36rem]:hidden" style={{ fontSize: '0.75cqw' }}>
                 Moment {j + 1} · {CLIPS[j].time}
               </span>
@@ -807,8 +808,8 @@ export function LongformToShorts({ className, style }: { className?: string; sty
             className="absolute"
             style={{ left: cq(CARDS_X - 4), right: cq(CARDS_X - 4), top: cq(CARD.y + CARD.h + 0.4), height: cq(4), ...run('lts-bottom') }}
           >
-            <span className="absolute inset-x-0 top-0 h-[0.15cqw] bg-gradient-to-r from-transparent via-brand to-transparent shadow-[0_0_1.2cqw_rgb(111_186_253/0.8)]" />
-            <span className="absolute inset-x-[6%] top-0 h-full bg-[radial-gradient(50%_100%_at_50%_0%,rgb(111_186_253/0.35),transparent)]" />
+            <span className="absolute inset-x-0 top-0 h-[0.15cqw] bg-gradient-to-r from-transparent via-brand to-transparent shadow-[0_0_1.2cqw_rgb(0_160_252/0.8)]" />
+            <span className="absolute inset-x-[6%] top-0 h-full bg-[radial-gradient(50%_100%_at_50%_0%,rgb(0_160_252/0.35),transparent)]" />
           </div>
 
           {/* ---------------------------------------------- Kanäle (4. Akt) */}
@@ -834,13 +835,13 @@ export function LongformToShorts({ className, style }: { className?: string; sty
                 </div>
                 {/* Leuchtet, sobald der erste Clip angekommen ist. */}
                 <div
-                  className="absolute inset-0 shadow-[0_0_2.4cqw_rgb(4_157_255/0.55)] ring-[0.18cqw] ring-brand ring-inset"
+                  className="absolute inset-0 shadow-[0_0_2.4cqw_rgb(0_160_252/0.55)] ring-[0.18cqw] ring-brand ring-inset"
                   style={{ borderRadius: cq(APP.radius), ...run(`lts-lit${k}`) }}
                 />
               </div>
 
               <span
-                className="absolute flex items-center justify-center rounded-full bg-brand font-semibold text-brand-ink tabular-nums shadow-[0_0_1.2cqw_rgb(4_157_255/0.7)]"
+                className="absolute flex items-center justify-center rounded-full bg-brand font-semibold text-brand-ink tabular-nums shadow-[0_0_1.2cqw_rgb(0_160_252/0.7)]"
                 // Auf dem Handy wären 2,6 cqw kaum 9 px — die Zahl soll lesbar bleiben.
                 style={{
                   right: `min(${cq(-1)},-5px)`,
@@ -913,7 +914,7 @@ export function LongformToShorts({ className, style }: { className?: string; sty
                 </span>
                 <span className="absolute bottom-0 left-0 whitespace-nowrap" style={run('lts-found')}>
                   <Chip>
-                    <span className="size-[0.6cqw] rounded-full bg-emerald-400" />
+                    <span className="size-[0.6cqw] rounded-full bg-brand" />
                     5 Momente gefunden
                   </Chip>
                 </span>
@@ -927,14 +928,14 @@ export function LongformToShorts({ className, style }: { className?: string; sty
                 {MOMENTS.map((moment, j) => (
                   <div
                     key={moment}
-                    className="absolute inset-y-0 rounded-full bg-brand shadow-[0_0_1cqw_rgb(111_186_253/0.9)]"
+                    className="absolute inset-y-0 rounded-full bg-brand shadow-[0_0_1cqw_rgb(0_160_252/0.9)]"
                     style={{ left: `${moment * 100}%`, width: '5.5%', ...run(`lts-m${j}`) }}
                   />
                 ))}
                 {MOMENTS.map((moment, j) => (
                   <span
                     key={moment}
-                    className="absolute bottom-[1.1cqw] rounded-full bg-brand font-semibold text-brand-ink tabular-nums shadow-[0_0_1.2cqw_rgb(111_186_253/0.7)]"
+                    className="absolute bottom-[1.1cqw] rounded-full bg-brand font-semibold text-brand-ink tabular-nums shadow-[0_0_1.2cqw_rgb(0_160_252/0.7)]"
                     style={{
                       left: `${(moment + 0.0275) * 100}%`,
                       marginLeft: '-1.25cqw',
@@ -962,7 +963,7 @@ export function LongformToShorts({ className, style }: { className?: string; sty
             {Array.from({ length: COUNT - 1 }, (_, k) => (
               <div
                 key={k}
-                className="absolute inset-y-[-1cqw] origin-top bg-brand-light shadow-[0_0_1.2cqw_rgb(111_186_253/0.95)]"
+                className="absolute inset-y-[-1cqw] origin-top bg-brand-light shadow-[0_0_1.2cqw_rgb(0_160_252/0.95)]"
                 style={{ left: `${((k + 1) * 100) / COUNT}%`, width: '0.14cqw', marginLeft: '-0.07cqw', ...run(`lts-c${k}`) }}
               />
             ))}
@@ -1056,7 +1057,7 @@ export function LongformToShorts({ className, style }: { className?: string; sty
           </ol>
           <div className="relative h-px w-full bg-white/15">
             <div
-              className="lts-rail-fill absolute inset-0 origin-left bg-gradient-to-r from-brand-deep via-brand to-brand-light shadow-[0_0_8px_rgb(111_186_253/0.7)]"
+              className="lts-rail-fill absolute inset-0 origin-left bg-gradient-to-r from-brand-deep via-brand to-brand-light shadow-[0_0_8px_rgb(0_160_252/0.7)]"
               style={{ animationName: 'lts-rail' }}
             />
           </div>
@@ -1113,7 +1114,7 @@ function ClipOverlay({
         className="absolute inline-flex items-center gap-[0.35cqw] rounded-full bg-black/50 font-semibold text-white ring-1 ring-white/15 tabular-nums"
         style={{ left: '0.7cqw', top: '0.7cqw', fontSize: '0.8cqw', padding: '0.2cqw 0.55cqw' }}
       >
-        <span className="size-[0.45cqw] rounded-full bg-emerald-400" />
+        <span className="size-[0.45cqw] rounded-full bg-brand" />
         {clip.score}
       </span>
 

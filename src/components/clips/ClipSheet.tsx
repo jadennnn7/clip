@@ -33,6 +33,7 @@ import { clipOutputDuration, clipSegments, outputToSource, sourceToOutput } from
 import { cn } from '@/lib/utils'
 import { jobsForClip, usePublishingQueue } from '@/stores/publishing-queue-store'
 import { useWorkspaceStore } from '@/stores/workspace-store'
+import { EDITOR_ENABLED } from '@/lib/features'
 import { FPS } from '@/types/editor'
 import type { Clip, Project, TranscriptWord } from '@/types/database'
 
@@ -65,7 +66,7 @@ export function ClipSheet({
   return (
     <Dialog open={open && Boolean(clip)} onOpenChange={(next) => { if (!next) onClose() }}>
       <DialogPortal>
-        <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-zinc-950/55 backdrop-blur-sm duration-200 data-closed:animate-out data-closed:fade-out-0 data-open:animate-in data-open:fade-in-0" />
+        <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/55 backdrop-blur-sm duration-200 data-closed:animate-out data-closed:fade-out-0 data-open:animate-in data-open:fade-in-0" />
         {clip ? (
           <SheetPopup
             clip={clip}
@@ -160,9 +161,12 @@ function SheetPopup({
       a.download = `${clip.title || 'clip'}.mp4`
       a.click()
       toast.success('Download gestartet')
-    } else {
+    } else if (EDITOR_ENABLED) {
       router.push(editorHref)
       toast.info('Öffne Editor zum Exportieren')
+    } else {
+      // Gerendert wird im Editor — solange er aus ist, gibt es nur fertige Exporte.
+      toast.info('Noch kein Export vorhanden', { description: 'Dieser Clip wurde noch nicht gerendert.' })
     }
   }
 
@@ -183,7 +187,7 @@ function SheetPopup({
     else if ((key === 'arrowright' || key === 'j') && next) onNavigate(next.id)
     else if (key === ' ' && !target.closest('button, a, [role="slider"], [role="tab"]')) playerRef.current?.toggle()
     else if (key === 'f') toggleFavoriteWithFeedback()
-    else if (key === 'e') router.push(editorHref)
+    else if (key === 'e' && EDITOR_ENABLED) router.push(editorHref)
     else return
     event.preventDefault()
   }
@@ -202,7 +206,7 @@ function SheetPopup({
         ref={panelRef}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className="flex max-h-[calc(100vh-24px)] w-full max-w-[1080px] flex-col overflow-y-auto rounded-2xl bg-[#0e0f11] text-white shadow-[0_40px_120px_-16px_rgba(0,0,0,.8)] ring-1 ring-white/10 outline-none sm:rounded-[28px] lg:h-[min(780px,calc(100vh-48px))] lg:flex-row lg:overflow-hidden"
+        className="flex max-h-[calc(100vh-24px)] w-full max-w-[1080px] flex-col overflow-y-auto rounded-2xl bg-background text-foreground shadow-[0_40px_120px_-16px_rgba(0,0,0,.8)] ring-1 ring-border outline-none dark lg:h-[min(780px,calc(100vh-48px))] lg:flex-row lg:overflow-hidden"
       >
         {/* Links: die Bühne, mit Blättern zwischen den Clips. Dahinter
             leuchtet der Clip selbst weich nach — wie der Ambient-Modus eines
@@ -303,18 +307,18 @@ function SheetPopup({
                     <DropdownMenu>
                       <DropdownMenuTrigger
                         aria-label="Weitere Optionen"
-                        className="flex size-8 cursor-pointer items-center justify-center rounded-full text-white/55 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                        className="flex size-8 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition hover:bg-foreground/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
                       >
                         <Ellipsis className="size-4" />
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-52 border-white/10 bg-[#1a1a1a] text-zinc-200 shadow-xl">
-                        <DropdownMenuItem onClick={toggleFavoriteWithFeedback} className="cursor-pointer gap-2 focus:bg-white/10 focus:text-white">
+                      <DropdownMenuContent align="end" className="w-52">
+                        <DropdownMenuItem onClick={toggleFavoriteWithFeedback} className="cursor-pointer gap-2">
                           <Heart className={cn('size-4', favorite && 'fill-current')} /> {favorite ? 'Aus Favoriten entfernen' : 'Als Favorit merken'}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={duplicate} className="cursor-pointer gap-2 focus:bg-white/10 focus:text-white">
+                        <DropdownMenuItem onClick={duplicate} className="cursor-pointer gap-2">
                           <CopyPlus className="size-4" /> Duplizieren
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setEditingTitle(true)} className="cursor-pointer gap-2 focus:bg-white/10 focus:text-white">
+                        <DropdownMenuItem onClick={() => setEditingTitle(true)} className="cursor-pointer gap-2">
                           <Pencil className="size-4" /> Titel ändern
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -323,7 +327,7 @@ function SheetPopup({
                       type="button"
                       onClick={onClose}
                       aria-label="Vorschau schließen"
-                      className="flex size-8 items-center justify-center rounded-full text-white/55 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                      className="flex size-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-foreground/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
                     >
                       <X className="size-4" />
                     </button>
@@ -332,7 +336,7 @@ function SheetPopup({
               </header>
 
               <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 pb-6">
-                <section className="rounded-2xl bg-white/[0.035] p-4 ring-1 ring-white/[0.07] ring-inset">
+                <section className="glass-tile rounded-2xl p-4">
                   <div className="flex items-center gap-4">
                     <ScoreRing value={clip.virality_score} />
                     <div className="min-w-0 flex-1">
@@ -384,7 +388,7 @@ function SheetPopup({
                 </section>
 
                 {clip.words && clip.words.length > 0 ? (
-                  <section className="flex min-h-[11rem] flex-1 flex-col rounded-2xl bg-white/[0.025] p-4 pr-2 ring-1 ring-white/[0.06] ring-inset">
+                  <section className="glass-tile flex min-h-[11rem] flex-1 flex-col rounded-2xl p-4 pr-2">
                     <h2 className="mb-2.5 flex items-center justify-between pr-2 text-xs font-medium text-white/55">
                       Transkript
                       <span className="font-normal text-white/35">Klick auf ein Wort springt hin</span>
@@ -399,7 +403,7 @@ function SheetPopup({
                 ) : null}
               </div>
 
-              <footer className="space-y-2 border-t border-white/[.06] bg-[#0e0f11] px-6 py-5 max-lg:sticky max-lg:bottom-0 lg:bg-transparent">
+              <footer className="space-y-2 border-t border-border bg-background px-6 py-5 max-lg:sticky max-lg:bottom-0 lg:bg-transparent">
                 {/* Der blaue Tropfen der App: dieselbe Hauptaktion wie überall. */}
                 <button
                   type="button"
@@ -408,18 +412,20 @@ function SheetPopup({
                 >
                   <Send className="size-4" /> Veröffentlichen
                 </button>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => router.push(editorHref)}
-                    className="flex items-center justify-center gap-2 rounded-xl bg-white/[.06] px-3 py-2.5 text-sm font-medium text-white/85 ring-1 ring-white/[.06] transition ring-inset hover:bg-white/[.11] hover:text-white focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none"
-                  >
-                    <Scissors className="size-4" /> Bearbeiten
-                  </button>
+                <div className={cn('grid gap-2', EDITOR_ENABLED ? 'grid-cols-2' : 'grid-cols-1')}>
+                  {EDITOR_ENABLED ? (
+                    <button
+                      type="button"
+                      onClick={() => router.push(editorHref)}
+                      className="flex items-center justify-center gap-2 control rounded-xl px-3 py-2.5 text-sm font-medium focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none"
+                    >
+                      <Scissors className="size-4" /> Bearbeiten
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     onClick={handleExport}
-                    className="flex items-center justify-center gap-2 rounded-xl bg-white/[.06] px-3 py-2.5 text-sm font-medium text-white/85 ring-1 ring-white/[.06] transition ring-inset hover:bg-white/[.11] hover:text-white focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none"
+                    className="flex items-center justify-center gap-2 control rounded-xl px-3 py-2.5 text-sm font-medium focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none"
                   >
                     <Download className="size-4" /> Exportieren
                   </button>
@@ -449,7 +455,7 @@ function ScoreRing({ value }: { value: number }) {
   const radius = 25
   const length = 2 * Math.PI * radius
   const clamped = Math.max(0, Math.min(100, value))
-  const tone = value >= 90 ? 'text-[#22c55e]' : value >= 70 ? 'text-amber-400' : 'text-zinc-300'
+  const tone = value >= 90 ? 'text-emerald-500 dark:text-[#22c55e]' : value >= 70 ? 'text-amber-600 dark:text-amber-400' : 'text-foreground/70'
   return (
     <span className={cn('relative flex size-16 shrink-0 items-center justify-center', tone)}>
       <svg viewBox="0 0 60 60" aria-hidden className="absolute inset-0 size-full -rotate-90">

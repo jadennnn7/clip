@@ -45,7 +45,7 @@ export default function ConnectionsPage() {
       <div className="mx-auto w-full max-w-4xl px-4 py-10 sm:px-6">
         <PageHeader
           title="Kanäle"
-          description="Verbinde deine Kanäle einmal. Danach bestimmst du pro Kanal, ob Clyp Clips nur erstellt, dir zur Freigabe vorlegt oder selbst veröffentlicht."
+          description="Verbinde deine Kanäle einmal. Danach bestimmst du pro Kanal, ob Ocuris Clips nur erstellt, dir zur Freigabe vorlegt oder selbst veröffentlicht."
           action={
             <Button variant="outline" size="sm" className="rounded-full" nativeButton={false} render={<Link href="/dashboard/calendar" />}>
               <CalendarClock className="size-3.5" />Zur Queue<ArrowRight className="size-3.5" />
@@ -59,7 +59,7 @@ export default function ConnectionsPage() {
 
         {loading ? (
           <div role="status" aria-label="Kanäle werden geladen" className="mt-10 grid gap-4 sm:grid-cols-3">
-            {PLATFORMS.map((platform) => <div key={platform} className="glass-tile h-64 animate-pulse rounded-[1.25rem]" />)}
+            {PLATFORMS.map((platform) => <div key={platform} className="glass-tile h-64 animate-pulse rounded-2xl" />)}
           </div>
         ) : null}
 

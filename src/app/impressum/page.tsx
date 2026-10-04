@@ -3,8 +3,8 @@ import { LegalPage, LegalSection } from '@/components/legal/LegalPage'
 import { OPERATOR } from '@/lib/legal'
 
 export const metadata: Metadata = {
-  title: 'Impressum — Clyp',
-  description: 'Anbieterkennzeichnung von Clyp nach § 5 DDG.',
+  title: 'Impressum — Ocuris',
+  description: 'Anbieterkennzeichnung von Ocuris nach § 5 DDG.',
 }
 
 /**

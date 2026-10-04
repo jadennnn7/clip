@@ -7,6 +7,7 @@
     "trigger:dev": "npx trigger.dev@4.6.3 dev --env-file .env.local",
     "trigger:deploy": "npm run prod:check && npx trigger.dev@4.6.3 deploy",
     "prod:check": "tsx scripts/check-production.ts",
+    "auth:mail": "tsx scripts/setup-auth-mail.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

@@ -15,7 +15,6 @@ import { LongformToShorts } from '@/components/landing/LongformToShorts'
 import { PricingSection } from '@/components/landing/PricingSection'
 import { PointerLight } from '@/components/landing/PointerLight'
 import { NightSky } from '@/components/landing/NightSky'
-import { SkyFilmStrip } from '@/components/landing/SkyFilmStrip'
 import { BrandMark } from '@/components/landing/BrandMark'
 import { CaptionMark } from '@/components/landing/CaptionMark'
 import {
@@ -28,14 +27,9 @@ import {
   LANDING_PLATFORMS,
   PlatformLogo,
 } from '@/components/landing/PlatformLogo'
-import { ShaderBackground } from '@/components/ui/hero-shader'
-import {
-  ImageStreamHero,
-  type CorridorPath,
-  type StreamImage,
-} from '@/components/ui/image-stream-hero'
 import { PLATFORM_LABEL } from '@/lib/social-labels'
 import { CREDIT_PACKS, getPlan, TRIAL } from '@/lib/stripe/plans'
+import { yearlyBillingAvailable } from '@/lib/stripe/availability'
 import { cn } from '@/lib/utils'
 
 /**
@@ -120,80 +114,42 @@ const stagger = (index: number) => ({ '--i': index }) as React.CSSProperties
 const HERO_PROOF = [
   FREE_ALLOWANCE,
   'Keine Kreditkarte',
-  'Veröffentlicht, nicht nur geschnitten',
+  'Monatlich kündbar',
 ] as const
 
 function Hero() {
   return (
-    // `--hero-tail`: wie weit der Shader unter der Belegzeile weiterläuft.
-    // Die Bühne darunter steht nicht mehr in ihm, sondern rückt um genau
-    // diesen Betrag (weniger `--hero-gap`) wieder hinauf — sie liegt also wie
-    // vorher im Auslauf des Shaders. Getrennt, weil sie beim Scrollen klebt:
-    // Im Shader ginge das nicht (`overflow: hidden` fängt `sticky` ab), und
-    // die Scroll-Strecke würde seine Leinwand um über 1000 px strecken.
+    // `--hero-tail`: wie weit der dunkle Grund unter der Belegzeile
+    // weiterläuft. Die Bühne darunter steht nicht mehr in ihm, sondern rückt
+    // um genau diesen Betrag (weniger `--hero-gap`) wieder hinauf — sie liegt
+    // also auf dem Planeten unter dem Horizont. Getrennt, weil sie beim
+    // Scrollen klebt: `overflow: hidden` hier fängt `sticky` ab.
     <section className="relative [--hero-gap:2.5rem] [--hero-tail:32rem] sm:[--hero-tail:48rem] lg:[--hero-gap:3.5rem] lg:[--hero-tail:59rem]">
-      {/* Der Shader ist immer dunkel (MeshGradient rendert auf #000000) — alle
-          Farben hier sind deshalb fest auf Weiß/Schwarz gesetzt.
-          Sein eigener Auslauf endet auf reinem Schwarz; der Grund der Seite
-          ist aber `--ambient-base` mit Korn. Deshalb `fade={false}` und
-          stattdessen ein Auslauf aus genau diesem Grund — sonst stünde unter
-          dem Hero eine sichtbare Stufe. */}
-      <ShaderBackground fade={false}>
-        {/* Nachthimmel über dem Shader (`NightSky`, selbst gezeichnet in
-            den Farben des früheren Hintergrundvideos) mit dem Jungen aus
-            dessen 4K-Original (`.omegaclip-data/hero-originals/herovid.mp4`,
-            freigestellt als `hero-boy.webp`). Läuft nach unten in den Grund
-            aus und wird abgedunkelt, damit die weiße Schrift lesbar bleibt. */}
-        {/* Wo der Himmel unten ausläuft, schien der Shader mit seinen hellen
-            Flecken milchig durch — mal links, mal beim Jungen rechts. Diese
-            Schicht dunkelt ihn dort ab und läuft selbst weich aus, darunter
-            leuchtet er wie gewohnt. */}
+      <div className="relative isolate w-full overflow-hidden bg-black">
+        {/* Kosmischer Nachthimmel: dezent abgedunkelt (ca. 35–40 % Deckkraft)
+            mit linearem Maskierungsverlauf nach unten, damit der Sternenhimmel
+            sanft hinter dem Text steht und über dem Horizont weich ausläuft. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-[135svh] bg-black/75 [mask-image:linear-gradient(to_bottom,#000_55%,transparent)]"
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-svh overflow-hidden [mask-image:linear-gradient(to_bottom,#000_70%,transparent)]"
+          className="pointer-events-none absolute inset-0 opacity-40 [mask-image:linear-gradient(to_bottom,#000_55%,transparent_92%)]"
         >
           <NightSky className="absolute inset-0" />
-          <div className="absolute inset-0 bg-black/55" />
-          {/* Das Horizontlicht hinter dem Jungen unten rechts, eigens
-              gedämpft — im selben Rahmen, so sitzt der Verlauf bei jedem
-              Seitenverhältnis auf ihm. */}
-          <div className="absolute top-1/2 left-1/2 aspect-video min-h-full min-w-full -translate-x-1/2 -translate-y-1/2 bg-[radial-gradient(ellipse_26%_40%_at_85%_80%,rgb(0_0_0/0.55),transparent_75%)]" />
-          {/* Der 16:9-Rahmen des früheren Videos (wie `object-cover`): Darin
-              steht der Junge genau, wo er im Video stand — unten rechts,
-              die Füße im Auslauf. Er steht über der Abdunkelung des
-              Himmels, sonst ginge er darin unter. */}
-          <div className="absolute top-1/2 left-1/2 aspect-video min-h-full min-w-full -translate-x-1/2 -translate-y-1/2">
-            {/* eslint-disable-next-line @next/next/no-img-element -- dekorativ, 12 KB, Lage in Prozent des Rahmens */}
-            <img
-              src="/hero-boy.webp"
-              alt=""
-              draggable={false}
-              className="absolute top-[74.31%] left-[80.55%] w-[5.18%] brightness-125"
-            />
-          </div>
+          <div className="absolute inset-0 bg-black/40" />
         </div>
-        {/* Die fertigen Clips kommen links aus der Eingabeleiste und
-            steigen als Filmstreifen im Bogen in den Himmel — über der
-            Abdunkelung, aber hinter dem Text (ab 75rem). Oben treibt es
-            mit der Drehung des Himmels (`sky-motion.ts`). */}
-        <SkyFilmStrip />
+
+        {/* Der Horizont (`.hero-sky`): der Rand eines riesigen dunklen
+            Planeten als feine Linie in Logo-Blau, knapp unter der
+            Belegzeile, ohne Lichtschein. Statisch, kein Shader, kein Video:
+            Der Hero kostet die Grafikkarte nichts. Die Bühne darunter steht
+            auf dem Planeten. */}
+        <div aria-hidden className="hero-sky">
+          <div className="hero-horizon" />
+          <div className="hero-rim" />
+        </div>
         <div
           aria-hidden
           className="ambient pointer-events-none absolute inset-x-0 bottom-0 h-96 bg-none [mask-image:linear-gradient(to_bottom,transparent,#000_78%)]"
         />
-        {/* Licht, das dem Zeiger träge folgt (`PointerLight`, `.hero-light`).
-            Vor dem Text im Baum, also hinter ihm. */}
-        <div
-          aria-hidden
-          data-hero-light
-          className="pointer-events-none absolute inset-0 overflow-hidden"
-        >
-          <div className="hero-light" />
-        </div>
 
         {/* Mindestens einen Bildschirm hoch, Text darin mittig: Die Animation
             darunter beginnt erst unterhalb des ersten Bildschirms. */}
@@ -202,7 +158,7 @@ function Hero() {
             {/* Plakette, Headline und Lead treten beim Wegscrollen zurück
                 (`.hero-exit`). Eingabeleiste und Animation darunter nicht:
                 Die Leiste ist Glas, und `opacity`/`filter` an einem Vorfahren
-                nähme ihr den Shader als Grund. */}
+                nähme ihr den Grund dahinter. */}
             <div className="hero-exit">
               {/* Die erste Kapitelmarke der Seite: Hier beginnt das lange
                   Video, das die Headline verspricht (siehe `Chapters.tsx`). */}
@@ -214,53 +170,59 @@ function Hero() {
 
               {/* Der Verlauf von Weiß nach Weiß/80 über die Zeilenhöhe ist der
                   Grund, warum große Headlines „gedruckt" statt „getippt" wirken.
-                  `bg-clip-text` beschneidet dabei Unterlängen, deshalb die
-                  Polsterung unten — sonst fehlt dem „g" in „langes" der Schwanz. */}
-              <h1 className="mx-auto mt-7 max-w-5xl font-display text-[2.6rem] leading-[0.95] font-semibold tracking-[-0.04em] text-balance sm:text-6xl lg:text-[4.25rem] xl:text-[4.75rem]">
+                  Die Polsterung unten schützt Unterlängen vor `bg-clip-text`.
+                  Die Pointe steht allein darunter, mittig wie ein Untertitel
+                  unter dem Bild.
+                  Die Botschaft ist „läuft ohne dich", ruhig und seriös gesagt:
+                  „Autopilot" heißt, Ocuris findet, schneidet und postet, der
+                  Creator muss nichts tun. Was Ocuris ist, sagen die
+                  Kapitelmarke darüber und der Lead darunter. Keine Zahl Clips
+                  (die Animation zeigt fünf). */}
+              <h1 className="mx-auto mt-7 max-w-5xl font-display text-[clamp(2.4rem,12vw,2.6rem)] leading-[0.95] font-semibold tracking-[-0.04em] text-balance sm:text-6xl lg:text-[4rem] xl:text-[4.5rem]">
                 <span
                   className="rise-in block bg-gradient-to-b from-white via-white to-white/80 bg-clip-text pb-[0.06em] text-transparent"
                   style={enter(60)}
                 >
-                  Ein langes Video.
+                  Deine Shorts.
                 </span>
-                <span className="rise-in block pb-[0.06em]" style={enter(120)}>
-                  <span className="bg-gradient-to-b from-white/55 to-white/30 bg-clip-text text-transparent">
-                    Zehn Clips.
-                  </span>{' '}
-                  <CaptionMark>Null Aufwand.</CaptionMark>
+                <span className="rise-in mt-[0.14em] block" style={enter(120)}>
+                  <CaptionMark>Auf Autopilot.</CaptionMark>
                 </span>
               </h1>
 
               <p
-                className="rise-in mx-auto mt-6 max-w-2xl text-base leading-relaxed text-pretty text-white/60 sm:text-[1.0625rem]"
+                className="rise-in mx-auto mt-7 max-w-2xl text-base leading-relaxed text-pretty text-white/60 sm:text-[1.0625rem]"
                 style={enter(180)}
               >
-                Clyp findet automatisch deine stärksten Momente, schneidet
-                sie für Social Media und plant die Veröffentlichung — in einem
-                einzigen Workflow.
+                Ocuris findet die stärksten Momente deines Videos, schneidet
+                sie zu Shorts und postet sie automatisch über die Woche
+                verteilt auf TikTok, YouTube und Instagram.
               </p>
             </div>
 
             <LinkBar
-              filmOrigin
               className="rise-in mx-auto mt-9 max-w-xl"
               style={enter(240)}
             />
 
             <ul
-              className="rise-in mt-7 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-white/55"
+              className="rise-in mt-5 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[0.8125rem] text-white/60"
               style={enter(300)}
             >
               {HERO_PROOF.map((item) => (
                 <li key={item} className="flex items-center gap-1.5">
-                  <Check aria-hidden className="size-3 shrink-0 text-brand" />
+                  <Check
+                    aria-hidden
+                    strokeWidth={2.5}
+                    className="size-3.5 shrink-0 text-brand"
+                  />
                   {item}
                 </li>
               ))}
             </ul>
           </div>
         </div>
-      </ShaderBackground>
+      </div>
 
       {/* Die Überschrift als Bewegung: Oben ein langes Video, unten fünf
           fertige Shorts — dazwischen zerfällt es. Wo der Browser es kann,
@@ -282,31 +244,27 @@ function Hero() {
  *
  * Die gesamte Leiste ist der Link. Vorher war das Feld eine tote Fläche: Man
  * klickt genau dorthin, wo man den Link einfügen würde, und nichts passierte.
- * Echtes Glas, weil darunter immer etwas läuft (Shader, Bildstrom) — die
+ * Echtes Glas, auch wenn darunter wenig läuft — die
  * Unschärfe hat etwas zu zeigen.
  */
 function LinkBar({
   className,
   style,
-  filmOrigin,
 }: {
   className?: string
   style?: React.CSSProperties
-  /** Hier kommt der Filmstreifen des Heros heraus (`SkyFilmStrip`). */
-  filmOrigin?: boolean
 }) {
   return (
     <div
       className={cn('w-full', className)}
       style={style}
-      data-film-origin={filmOrigin || undefined}
     >
       <Link
         href="/dashboard"
-        className="glass glass-interactive group flex w-full items-center gap-2.5 rounded-full p-1.5 pl-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/60"
+        className="glass glass-interactive group flex w-full items-center gap-3 rounded-full p-2 pl-5 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/60"
       >
         <span className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/35 to-transparent" />
-        <Link2 aria-hidden className="size-4 shrink-0 text-brand/80" />
+        <Link2 aria-hidden className="size-[1.125rem] shrink-0 text-brand/80" />
         {/* Auf 375 px brach der lange Satz mitten im Wort ab
             („Video-Link einfüg…") — die kurze Fassung sagt dasselbe,
             der Zusatz kommt erst, wenn Platz dafür da ist. */}
@@ -316,7 +274,7 @@ function LinkBar({
             Video-Link einfügen oder Datei hochladen
           </span>
         </span>
-        <span className="liquid liquid-brand transition-ui flex h-9 shrink-0 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-white group-hover:brightness-[1.06] sm:px-5">
+        <span className="liquid liquid-brand transition-ui flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-white group-hover:brightness-[1.06] sm:px-5">
           Gratis starten
           <ArrowRight
             aria-hidden
@@ -332,7 +290,7 @@ function LinkBar({
  * Wohin veröffentlicht wird — genau diese drei, nichts weiter.
  *
  * Sitzt im Auslauf des Heros statt als eigenes Band darunter: Die Leiste ist
- * die Pointe der Headline („Null Aufwand" heißt: bis dorthin), kein
+ * die Ergänzung zur Headline mit den unterstützten Plattformen, kein
  * Logo-Streifen für Kunden, die es nicht gibt.
  */
 function PlatformStrip() {
@@ -375,7 +333,7 @@ function PlatformStrip() {
  * Die Pointen tragen das Blau des Logos.
  */
 const STATEMENT: Array<{ text: string; key?: boolean }> = [
-  { text: 'Du lieferst das Video. Clyp liefert' },
+  { text: 'Du lieferst das Video. Ocuris liefert' },
   { text: 'deinen Feed', key: true },
   { text: '—' },
   { text: 'jeden Tag,', key: true },
@@ -441,7 +399,7 @@ function Examples() {
       <div className="relative mt-10 [perspective:1400px]">
         <div
           aria-hidden
-          className="scroll-glow pointer-events-none absolute inset-x-[8%] -bottom-10 -z-10 h-48 rounded-full bg-[radial-gradient(closest-side,rgb(111_186_253/0.22),rgb(36_147_255/0.07)_60%,transparent)]"
+          className="scroll-glow pointer-events-none absolute inset-x-[8%] -bottom-10 -z-10 h-48 rounded-full bg-[radial-gradient(closest-side,rgb(0_160_252/0.22),rgb(0_160_252/0.07)_60%,transparent)]"
         />
         <div className="scroll-tilt">
           <ClipGallery />
@@ -449,7 +407,7 @@ function Examples() {
       </div>
 
       <p className="mt-5 px-4 text-center text-xs text-white/45">
-        Echte Clips aus Clyp · je die ersten 8 Sekunden, ohne Ton
+        Echte Clips aus Ocuris · je die ersten 8 Sekunden, ohne Ton
       </p>
     </section>
   )
@@ -468,7 +426,7 @@ function Features() {
       <SectionHeader
         chapter="funktionen"
         title="Alles drin, was ein Clip braucht."
-        lead="Clyp macht alles von selbst. Und wo du doch eingreifen willst, geht das ohne Schnittprogramm."
+        lead="Ocuris macht alles von selbst. Und wo du doch eingreifen willst, geht das ohne Schnittprogramm."
       />
       <FeatureBento />
     </Section>
@@ -530,7 +488,7 @@ function Audiences() {
       <SectionHeader
         chapter="fuer-wen"
         title="Für alle, die mehr reden als schneiden."
-        lead="Wenn dein Material lang ist und deine Kanäle kurze Clips brauchen, passt Clyp."
+        lead="Wenn dein Material lang ist und deine Kanäle kurze Clips brauchen, passt Ocuris."
       />
 
       <ul className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -574,11 +532,14 @@ function Audiences() {
 
 /* ========================================================================== */
 
-/** Tarife mit Monats-/Jahres-Umschalter — siehe `PricingSection`. */
+/**
+ * Tarife mit Monats-/Jahres-Umschalter — siehe `PricingSection`. Ob der
+ * Jahrestarif buchbar ist, weiß nur der Server (Stripe-Preis-IDs).
+ */
 function Pricing() {
   return (
     <Section id="preise">
-      <PricingSection />
+      <PricingSection yearlyAvailable={yearlyBillingAvailable()} />
     </Section>
   )
 }
@@ -601,7 +562,7 @@ const FAQ: Array<{ question: string; answer: React.ReactNode }> = [
     question: 'Brauche ich Schnitt-Erfahrung?',
     answer: (
       <>
-        Nein. Clyp liefert fertige Clips — mit Untertiteln, Bildausschnitt,
+        Nein. Ocuris liefert fertige Clips — mit Untertiteln, Bildausschnitt,
         Titel und Hashtags. Der Editor ist für Korrekturen da, nicht Pflicht:
         Wenn dir ein Clip passt, geht er so raus.
       </>
@@ -612,7 +573,7 @@ const FAQ: Array<{ question: string; answer: React.ReactNode }> = [
     answer: (
       <>
         1 Credit ist 1 Minute Ausgangsvideo. Ein Podcast mit 60 Minuten kostet
-        60 Credits — alle Clips, die Clyp daraus schneidet, sind enthalten,
+        60 Credits — alle Clips, die Ocuris daraus schneidet, sind enthalten,
         ebenso Bearbeitung und Exporte. Abgebucht wird erst, wenn die Clips
         fertig sind; scheitert der Download oder die Analyse, kostet das
         nichts. Angefangene Minuten zählen als ganze Minute.
@@ -631,7 +592,7 @@ const FAQ: Array<{ question: string; answer: React.ReactNode }> = [
     ),
   },
   {
-    question: 'Veröffentlicht Clyp wirklich automatisch?',
+    question: 'Veröffentlicht Ocuris wirklich automatisch?',
     answer: (
       <>
         Ja, Auto-Publish gibt es in jedem Tarif: ab einem Score, den du pro
@@ -651,12 +612,12 @@ const FAQ: Array<{ question: string; answer: React.ReactNode }> = [
     ),
   },
   {
-    question: 'Wie kann ich Clyp testen?',
+    question: 'Wie kann ich Ocuris testen?',
     answer: (
       <>
         Einmalig mit {TRIAL.credits} Minuten Video und {TRIAL.exports}{' '}
         Exporten, ohne Kreditkarte. Das reicht, um an einem echten Video zu
-        sehen, welche Momente Clyp findet und wie die Clips aussehen. Die
+        sehen, welche Momente Ocuris findet und wie die Clips aussehen. Die
         Tarife stehen oben unter{' '}
         <Link
           href="#preise"
@@ -707,104 +668,70 @@ function Faq() {
 
 /* ========================================================================== */
 
-/** Standbilder aus den Clips der Galerie, 360 × 640, mit eingebrannten Untertiteln. */
-const still = (name: string) => `/gallery/stream/${name}.jpg`
-
 /**
- * Echte Shorts aus Clyp, je zwei Momente aus den Clips der Galerie.
- * Gesichter und Szenen wechseln sich ab, und kein Clip steht neben sich
- * selbst.
- */
-const CLIP_STREAM: StreamImage[] = [
-  { src: still('holiday-cap'), alt: 'Talkshow: Gast mit Baseballcap' },
-  { src: still('tunnel-rain'), alt: 'Doku: Arbeiter mit Helmen im Regen' },
-  { src: still('fresh-woman'), alt: 'Interview: Frau erzählt am Tisch' },
-  { src: still('streak'), alt: 'Gaming: Streamer mit Zähler' },
-  { src: still('podcast-mic'), alt: 'Podcast: Mann am Mikrofon' },
-  { src: still('family-map'), alt: 'Story: animierte Landkarte' },
-  { src: still('got-it-guest'), alt: 'Livestream: Gast staunt in die Kamera' },
-  { src: still('fresh-table'), alt: 'Interview: Runde im Restaurant' },
-  { src: still('holiday-guest'), alt: 'Talkshow: Gast im Trainingsanzug' },
-  { src: still('got-it-phone'), alt: 'Livestream: Handy vor dem Mikrofon' },
-  { src: still('delivery'), alt: 'Comedy: Mann mit Cap von unten gefilmt' },
-  { src: still('family-university'), alt: 'Story: Universitätswappen' },
-]
-
-/**
- * Hochformat wie ein Short (9 : 16) und rundere Ecken als die Vorlage —
- * dieselbe Kartensprache wie die Clips im Produkt.
- */
-const CLIP_STREAM_PATH: CorridorPath = { cardWidth: 14, cardHeight: 25, cardRadius: 1.1 }
-
-/**
- * Der Abschluss nimmt die Überschrift wörtlich: Aus der Mitte strömen Shorts
- * auf den Betrachter zu. Der Strom bleibt schwarz-weiß — Farbe trägt hier
- * nur das Licht in Logo-Blau, nicht die Bilder. Oben und unten dunkeln
- * Kappen den Strom für die Schrift ab; die Mitte bleibt offen, dort entspringt er.
+ * Der Abschluss als Karte, in die von unten tiefes Logo-Blau steigt —
+ * schlicht, ohne Bild. Vorher standen hier der Nachthimmel aus dem alten
+ * Hero („mach da bitte was anderes hin nicht den himmel“), kurz das
+ * Logo-Zeichen als Kontur und davor ein 3D-Korridor aus Clips, der die
+ * Untertitel zu Fetzen schnitt.
  */
 function ClosingCta() {
   return (
     <Section id="start">
       <div className="relative">
         {/* Zwei Lichtinseln halb hinter der Fläche: Erst durch sie wird die
-            Unschärfe des Glases sichtbar. */}
+            Kante der Karte sichtbar. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute -top-16 left-[8%] -z-10 size-72 rounded-full bg-[radial-gradient(closest-side,rgb(111_186_253/0.22),transparent)]"
+          className="pointer-events-none absolute -top-16 left-[8%] -z-10 size-72 rounded-full bg-[radial-gradient(closest-side,rgb(0_160_252/0.22),transparent)]"
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute right-[6%] -bottom-20 -z-10 size-80 rounded-full bg-[radial-gradient(closest-side,rgb(111_186_253/0.14),transparent)]"
+          className="pointer-events-none absolute right-[6%] -bottom-20 -z-10 size-80 rounded-full bg-[radial-gradient(closest-side,rgb(0_160_252/0.14),transparent)]"
         />
 
-        {/* `before:z-20` hebt die Lichtkante des Glases über die Karten —
-            sonst läge der Strom auf ihr. */}
-        <ImageStreamHero
-          images={CLIP_STREAM}
-          path={CLIP_STREAM_PATH}
-          cards={11}
-          speed={24}
-          axis={55}
-          className="glass scroll-zoom h-[40rem] rounded-[2rem] text-center before:z-20 sm:h-[42rem] [&_img]:brightness-90 [&_img]:contrast-110 [&_img]:grayscale"
-        >
+        {/* `glass-tile` statt `glass`: Der Verlauf füllt die Karte, eine
+            Unschärfe hätte nichts zu zeigen. `before:z-20` hebt die
+            Lichtkante über den Verlauf. */}
+        <div className="glass-tile scroll-zoom overflow-hidden rounded-[2rem] text-center before:z-20">
+          {/* Von unten Mitte nach außen: das Logo-Blau, nur immer stärker
+              mit Schwarz gemischt — derselbe Ton, kein zweites Blau. Unten
+              eine Lichtnaht. */}
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgb(0_0_0/0.86),rgb(0_0_0/0.5)_32%,transparent_50%,transparent_62%,rgb(0_0_0/0.55)_76%,rgb(0_0_0/0.9))]"
-          />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-[radial-gradient(60%_100%_at_50%_0%,rgb(255_255_255/0.08),transparent)]"
-          />
-
-          <div className="relative z-10 flex h-full flex-col items-center justify-between px-6 py-12 sm:px-12 sm:py-16">
-            <div>
-              <ChapterMarker id="start" className="mb-5 justify-center" />
-              <h2 className="mx-auto max-w-2xl font-display text-4xl leading-[1.05] font-semibold tracking-[-0.035em] text-balance text-white sm:text-5xl">
-                Dein nächstes Video hat schon{' '}
-                <CaptionMark on="scroll">zehn Shorts</CaptionMark> in sich.
-              </h2>
-              <p className="mx-auto mt-5 max-w-md text-base text-pretty text-white/70 sm:text-[1.0625rem]">
-                Lade es hoch und sieh dir an, welche Momente Clyp findet.
-              </p>
-            </div>
-
-            {/* Dasselbe Feld wie oben: Wer bis hierher gelesen hat, soll
-                nicht erst zurückscrollen müssen, um anzufangen. */}
-            <div className="flex w-full max-w-xl flex-col items-center">
-              <LinkBar />
-
-              <p className="mt-5 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-white/60">
-                {FREE_ALLOWANCE} · keine Kreditkarte ·
-                <Link
-                  href="/demo"
-                  className="rounded-sm text-white underline decoration-brand/60 underline-offset-4 outline-none hover:decoration-brand focus-visible:ring-2 focus-visible:ring-white/50"
-                >
-                  Erst den Editor ansehen
-                </Link>
-              </p>
-            </div>
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_90%_at_50%_120%,#0088d6_0%,#006097_22%,#003351_45%,#00131e_68%,#000_90%)]"
+          >
+            <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[rgb(0_160_252/0.6)] to-transparent" />
           </div>
-        </ImageStreamHero>
+
+          <div className="relative z-10 flex min-h-[36rem] flex-col items-center justify-center px-6 py-16 sm:min-h-[40rem] sm:px-12 sm:py-20">
+            <ChapterMarker id="start" className="mb-5 justify-center" />
+            <h2 className="mx-auto max-w-2xl font-display text-4xl leading-[1.05] font-semibold tracking-[-0.035em] text-balance text-white sm:text-5xl">
+              Dein nächstes Video hat schon{' '}
+              <CaptionMark on="scroll">zehn Shorts</CaptionMark> in sich.
+            </h2>
+            <p className="mx-auto mt-5 max-w-md text-base text-pretty text-white/70 sm:text-[1.0625rem]">
+              Lade es hoch und sieh dir an, welche Momente Ocuris findet.
+            </p>
+
+            {/* Ohne Eingabefeld — auf Wunsch nur oben im Hero. Aber ein
+                Knopf: Wer bis hier gelesen hat, soll nicht zurückscrollen
+                müssen. Derselbe blaue Tropfen wie „Gratis starten" oben. */}
+            <Link
+              href="/dashboard"
+              className="liquid liquid-brand transition-ui group mt-8 inline-flex h-12 items-center gap-2 rounded-full px-7 text-[0.9375rem] font-semibold text-white outline-none hover:brightness-[1.06] focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+            >
+              Gratis starten
+              <ArrowRight
+                aria-hidden
+                className="size-4 transition-transform duration-300 ease-(--ease-out-quint) group-hover:translate-x-0.5"
+              />
+            </Link>
+            <p className="mt-4 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-white/75">
+              {FREE_ALLOWANCE} · keine Kreditkarte
+            </p>
+          </div>
+        </div>
       </div>
     </Section>
   )
@@ -832,7 +759,7 @@ function SiteFooter() {
               <BrandMark />
             </Link>
             <p className="mt-3 text-sm leading-relaxed text-white/55">
-              Du fügst einen Link ein. Clyp bewertet jeden Moment und
+              Du fügst einen Link ein. Ocuris bewertet jeden Moment und
               veröffentlicht die besten Clips — vollautomatisch.
             </p>
           </div>
@@ -864,7 +791,7 @@ function SiteFooter() {
             <Link href="/datenschutz" className="rounded-sm underline-offset-4 outline-none hover:text-white hover:underline focus-visible:ring-2 focus-visible:ring-white/50">
               Datenschutz
             </Link>
-            <span>© {new Date().getFullYear()} Clyp</span>
+            <span>© {new Date().getFullYear()} Ocuris</span>
           </p>
         </div>
       </div>
@@ -945,7 +872,7 @@ function AmbientLight({ className }: { className?: string }) {
     <div
       aria-hidden
       className={cn(
-        'pointer-events-none absolute -z-10 rounded-full bg-[radial-gradient(closest-side,rgb(111_186_253/0.08),transparent)]',
+        'pointer-events-none absolute -z-10 rounded-full bg-[radial-gradient(closest-side,rgb(0_160_252/0.08),transparent)]',
         className,
       )}
     />

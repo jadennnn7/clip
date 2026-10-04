@@ -24,7 +24,7 @@ function facts(platform: SocialPlatform, capability: PlatformCapability): Fact[]
   const auto: Fact = { kind: 'yes', text: 'Vollautomatisch öffentlich' }
   if (platform === 'youtube') return [
     { kind: 'yes', text: 'Upload direkt auf deinen Kanal' },
-    capability.canAutoPublish ? auto : { kind: 'later', text: 'Vorerst privat, bis YouTube Clyp freigibt' },
+    capability.canAutoPublish ? auto : { kind: 'later', text: 'Vorerst privat, bis YouTube Ocuris freigibt' },
   ]
   if (platform === 'instagram') return [
     { kind: 'yes', text: 'Upload als Reel' },
@@ -50,7 +50,7 @@ export function PlatformConnectCard({ platform, capability, enabled, primary }: 
   const { name, format } = NAME[platform]
 
   return (
-    <article className="glass-tile flex flex-col rounded-[1.25rem] p-5">
+    <article className="glass-tile flex flex-col rounded-2xl p-5">
       <div className="flex items-start justify-between gap-3">
         <span className="glass-lens flex size-11 items-center justify-center rounded-2xl">
           <PlatformLogo platform={platform} className="size-5" />

@@ -15,6 +15,7 @@ import { StatusBadge } from '@/components/dashboard/StatusBadge'
 import { DeleteActions, useDeleteProject } from '@/components/clips/ProjectDialogs'
 import type { Project, ProjectSource, ProjectStatus } from '@/types/database'
 import { DEFAULT_PROJECT_SETTINGS } from '@/types/workspace'
+import { EDITOR_ENABLED } from '@/lib/features'
 
 /** Lage eines Clips im Quellvideo, in Sekunden. */
 export interface ClipRange {
@@ -188,7 +189,7 @@ function ProjectCard({
             <MoreHorizontal />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {isReady ? (
+            {EDITOR_ENABLED && isReady ? (
               <DropdownMenuItem render={<Link href={`/dashboard/projects/${project.id}`} />}>
                 <Scissors />Im Editor öffnen
               </DropdownMenuItem>
@@ -393,7 +394,7 @@ function Waveform({
 
 function EmptyState() {
   return (
-    <p className="rounded-[1.25rem] border border-dashed border-foreground/15 py-12 text-center text-sm text-muted-foreground">
+    <p className="rounded-2xl border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
       Noch keine Projekte — wirf oben ein Video ein.
     </p>
   )

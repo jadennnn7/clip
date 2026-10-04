@@ -1,7 +1,8 @@
 import type { SubscriptionTier } from '@/types/database'
+import type { BillingInterval } from '@/lib/stripe/plans'
 
 export type CheckoutRequest =
-  | { kind: 'plan'; tier: SubscriptionTier }
+  | { kind: 'plan'; tier: SubscriptionTier; interval?: BillingInterval }
   | { kind: 'pack'; packId: string }
   | { kind: 'portal' }
 

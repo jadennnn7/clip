@@ -20,7 +20,7 @@ export default function ClipLibraryPage() {
   const running = projects.filter((project) => ACTIVE_STATUSES.includes(project.status)).length
 
   return <div className="h-full overflow-y-auto">
-    <div className="mx-auto max-w-[76rem] px-4 py-7 sm:px-6 sm:py-9">
+    <div className="mx-auto max-w-[76rem] px-4 py-10 sm:px-6">
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="mb-2 text-[10px] font-medium tracking-[0.2em] text-muted-foreground uppercase">Deine Content-Zentrale</p>

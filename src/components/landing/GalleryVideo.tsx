@@ -9,13 +9,20 @@ import { useEffect, useRef } from 'react'
  * (die Liste doppelt), sichtbar sind höchstens sieben. Bis dahin lädt das
  * Video nichts und zeigt sein Standbild. Mit „Bewegung reduzieren" bleibt es
  * beim Standbild.
+ *
+ * Schmale Fenster bekommen `smallSrc` (360 × 640, gut halb so groß): Die
+ * Karte ist dort nur 168 px breit. Die große Quelle steht zuerst und trägt
+ * die Bedingung — ein Browser, der `media` an `<source>` nicht kennt, nimmt
+ * sie wie bisher für alle.
  */
 export function GalleryVideo({
   src,
+  smallSrc,
   poster,
   label,
 }: {
   src: string
+  smallSrc?: string
   poster: string
   /** Leer für die doppelte Hälfte des Bands, die Vorleser überspringen. */
   label: string
@@ -36,7 +43,6 @@ export function GalleryVideo({
   return (
     <video
       ref={videoRef}
-      src={src}
       poster={poster}
       muted
       loop
@@ -44,6 +50,10 @@ export function GalleryVideo({
       preload="none"
       aria-label={label || undefined}
       className="absolute inset-0 size-full object-cover"
-    />
+    >
+      {/* Gleich der Grenze, ab der die Karte in `ClipGallery` wächst (`sm`). */}
+      <source src={src} type="video/mp4" media={smallSrc ? '(min-width: 40rem)' : undefined} />
+      {smallSrc ? <source src={smallSrc} type="video/mp4" /> : null}
+    </video>
   )
 }

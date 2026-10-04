@@ -3,16 +3,14 @@ import { join } from 'node:path'
 import { ImageResponse } from 'next/og'
 
 /**
- * Vorschaubild, wenn jemand einen Clyp-Link teilt (WhatsApp, LinkedIn, X,
+ * Vorschaubild, wenn jemand einen Ocuris-Link teilt (WhatsApp, LinkedIn, X,
  * Slack …). Neutraler dunkler Grund, das Hellblau des Logos als einziger
  * Akzent — dieselbe Palette wie die Landingpage.
  */
 
-export const alt = 'Clyp — Vom Langformat zum veröffentlichten Short'
+export const alt = 'Ocuris — Vom Langformat zum veröffentlichten Short'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
-
-const logo = `data:image/png;base64,${(await readFile(join(process.cwd(), 'public/Logo.png'))).toString('base64')}`
 
 /**
  * Satori setzt Wörter einzeln und verteilt die Abstände mit der
@@ -21,7 +19,11 @@ const logo = `data:image/png;base64,${(await readFile(join(process.cwd(), 'publi
  */
 const line = (text: string) => text.replaceAll(' ', '\u00a0')
 
-export default function OpengraphImage() {
+export default async function OpengraphImage() {
+  // Pro Aufruf gelesen, nicht beim Laden des Moduls: Sonst zeigte der
+  // Dev-Server nach einem neuen `Logo.png` bis zum Neustart das alte.
+  const logo = `data:image/png;base64,${(await readFile(join(process.cwd(), 'public/Logo.png'))).toString('base64')}`
+
   return new ImageResponse(
     (
       <div
@@ -39,9 +41,10 @@ export default function OpengraphImage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           {/* Das PNG hat viel Rand um das Zeichen; der Ausschnitt gleicht das aus. */}
           <div style={{ display: 'flex', width: 60, height: 60, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
-            <img src={logo} alt="" width={88} height={88} />
+            {/* `contain`: Das Logo muss nicht quadratisch sein. */}
+            <img src={logo} alt="" width={88} height={88} style={{ objectFit: 'contain' }} />
           </div>
-          <span style={{ fontSize: 40 }}>Clyp</span>
+          <span style={{ fontSize: 40 }}>Ocuris</span>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -50,7 +53,7 @@ export default function OpengraphImage() {
             <span>{line('veröffentlichten Short')}</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', fontSize: 28, lineHeight: 1.4, color: 'rgba(250, 250, 250, 0.62)' }}>
-            <span>{line('Clyp findet die stärksten Momente in deinem Video,')}</span>
+            <span>{line('Ocuris findet die stärksten Momente in deinem Video,')}</span>
             <span>{line('schneidet sie auf 9:16, untertitelt sie und veröffentlicht sie.')}</span>
           </div>
         </div>

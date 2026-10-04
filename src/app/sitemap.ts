@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { siteUrl } from '@/lib/site-url'
+import { EDITOR_ENABLED } from '@/lib/features'
 
 /**
  * Die öffentlichen Seiten. Kommen weitere Rechtsseiten dazu (AGB,
@@ -14,7 +15,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   })
   return [
     page('/', 1),
-    page('/demo', 0.7),
+    ...(EDITOR_ENABLED ? [page('/demo', 0.7)] : []),
     page('/signup', 0.6),
     page('/login', 0.3),
     page('/konto-loeschen', 0.2),

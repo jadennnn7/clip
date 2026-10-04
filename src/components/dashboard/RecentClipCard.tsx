@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { Scissors } from 'lucide-react'
 import { ClipThumbnail } from '@/components/clips/ClipThumbnail'
 import { outputFormatCssAspect } from '@/lib/output-format'
 import { cn } from '@/lib/utils'
@@ -17,7 +16,8 @@ function scoreTone(score: number): string {
 /**
  * Clip in der Übersicht — schlank wie in der Clip-Bibliothek, ohne Glas-Kachel.
  *
- * Hover: anheben, Zoom, Lichtstreif und Scheren-CTA — wie bei den Projektkarten.
+ * Hover: anheben, Zoom und Lichtstreif — wie bei den Projektkarten. Die
+ * ganze Karte ist der Link, ein eigener „Öffnen"-Knopf darauf wäre doppelt.
  */
 export function RecentClipCard({
   clip,
@@ -80,14 +80,6 @@ export function RecentClipCard({
           aria-hidden
           className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
         />
-
-        <span
-          aria-hidden
-          className="liquid pointer-events-none absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 scale-75 items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold opacity-0 shadow-lg transition-[transform,opacity] duration-500 ease-[var(--ease-spring)] group-hover:scale-100 group-hover:opacity-100 group-focus-visible:scale-100 group-focus-visible:opacity-100"
-        >
-          <Scissors className="size-3.5" />
-          Öffnen
-        </span>
       </div>
 
       <div className="mt-2.5 px-0.5">
@@ -96,7 +88,7 @@ export function RecentClipCard({
         </p>
         <div className="mt-1.5 flex items-baseline justify-between gap-2">
           <span
-            className={cn('font-display text-xl font-bold tracking-tight tabular-nums', scoreTone(clip.virality_score))}
+            className={cn('font-display text-xl font-semibold tracking-tight tabular-nums', scoreTone(clip.virality_score))}
             title="Viralitäts-Score"
           >
             {clip.virality_score}

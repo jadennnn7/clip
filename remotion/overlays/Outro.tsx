@@ -82,7 +82,7 @@ export const Outro: React.FC = () => {
               filter: `blur(${(1 - word) * 8 * unit}px)`,
             }}
           >
-            Clyp
+            Ocuris
           </span>
         </div>
       </div>

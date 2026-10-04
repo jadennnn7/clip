@@ -3,7 +3,7 @@ import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow'
 import { createClient } from '@/lib/supabase/server'
 
 export const metadata: Metadata = {
-  title: 'Willkommen bei Clyp',
+  title: 'Willkommen bei Ocuris',
 }
 
 /** Vorname aus der Registrierung — nur für die Begrüßung. */

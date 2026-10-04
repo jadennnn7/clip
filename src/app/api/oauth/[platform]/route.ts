@@ -11,7 +11,7 @@ export async function GET(request: Request, context: { params: Promise<{ platfor
   try {
     const { platform } = await context.params
     if (!isSocialPlatform(platform)) throw new PublishingApiError(404, 'Plattform nicht gefunden.')
-    if (request.headers.get('sec-fetch-site') === 'cross-site') throw new PublishingApiError(403, 'Starte die Verbindung bitte in Clyp.')
+    if (request.headers.get('sec-fetch-site') === 'cross-site') throw new PublishingApiError(403, 'Starte die Verbindung bitte in Ocuris.')
     const origin = publishingAppOrigin()
     // `?return=onboarding`: Die Erst-Einrichtung bekommt das Ergebnis selbst.
     const returnTo = parseOAuthReturn(new URL(request.url).searchParams.get('return'))

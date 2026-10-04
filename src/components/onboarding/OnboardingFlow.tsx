@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
+import { LOGO } from '@/lib/logo'
 import { ArrowLeft, ArrowRight, Check, ExternalLink, Link2, Loader2, Scissors, Send, ShieldCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import type { SocialAccount, SocialPlatform } from '@/types/database'
@@ -120,9 +121,9 @@ function BrandMark() {
   return (
     <div className="flex items-center gap-2">
       <span className="relative size-8 shrink-0 overflow-hidden">
-        <Image src="/Logo.png" alt="" width={32} height={32} className="size-8 scale-[1.45] object-contain" priority />
+        <Image src={LOGO} alt="" width={32} height={32} className="size-8 scale-[1.45] object-contain" priority />
       </span>
-      <span className="font-display text-lg font-semibold tracking-tight">Clyp</span>
+      <span className="font-display text-lg font-semibold tracking-tight">Ocuris</span>
     </div>
   )
 }
@@ -191,13 +192,13 @@ function ConnectStep({
   return (
     <section aria-labelledby={HEADING_ID.connect}>
       <p className="rise-in text-sm font-medium text-muted-foreground">
-        {firstName ? `Willkommen, ${firstName}.` : 'Willkommen bei Clyp.'}
+        {firstName ? `Willkommen, ${firstName}.` : 'Willkommen bei Ocuris.'}
       </p>
       <h1 id={HEADING_ID.connect} tabIndex={-1} className={TITLE_CLASS}>
         Wo sollen deine Clips landen?
       </h1>
       <p className="rise-in mt-4 max-w-md text-[15px] leading-relaxed text-muted-foreground" style={{ animationDelay: '80ms' }}>
-        Verbinde deine Kanäle, und Clyp lädt fertige Clips direkt dort hoch. Das geht auch später jederzeit.
+        Verbinde deine Kanäle, und Ocuris lädt fertige Clips direkt dort hoch. Das geht auch später jederzeit.
       </p>
 
       {!loading && (error || configured === false) ? (
@@ -330,10 +331,10 @@ function ReadyStep({
 }) {
   const channels = accounts.filter((account) => account.status === 'active').map((account) => PLATFORM_LABEL[account.platform])
   const flow = [
-    { icon: Link2, title: 'Link einfügen', body: 'Ein Videolink oder eine eigene Datei — mehr braucht Clyp nicht.' },
-    { icon: Scissors, title: 'Clips prüfen', body: 'Clyp schneidet die stärksten Momente ins Hochformat, mit Untertiteln. Anpassen kannst du alles im Editor.' },
+    { icon: Link2, title: 'Link einfügen', body: 'Ein Videolink oder eine eigene Datei — mehr braucht Ocuris nicht.' },
+    { icon: Scissors, title: 'Clips prüfen', body: 'Ocuris schneidet die stärksten Momente ins Hochformat, mit Untertiteln. Anpassen kannst du alles im Editor.' },
     channels.length
-      ? { icon: Send, title: 'Freigeben', body: 'Du gibst frei, Clyp lädt hoch und plant die Clips mit 8 Stunden Abstand.' }
+      ? { icon: Send, title: 'Freigeben', body: 'Du gibst frei, Ocuris lädt hoch und plant die Clips mit 8 Stunden Abstand.' }
       : { icon: Send, title: 'Exportieren', body: 'Lade fertige Clips herunter — oder verbinde später einen Kanal unter „Kanäle“.' },
   ]
 

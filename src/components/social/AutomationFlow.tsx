@@ -7,13 +7,13 @@ export type AutomationState = 'none' | 'manual' | 'review' | 'auto'
 
 const STEPS = [
   { icon: Link2, title: 'Link einfügen', text: 'Videolink oder eigene Datei.' },
-  { icon: Scissors, title: 'Clips erstellen', text: 'Schnitt, Untertitel und Score übernimmt Clyp.' },
+  { icon: Scissors, title: 'Clips erstellen', text: 'Schnitt, Untertitel und Score übernimmt Ocuris.' },
   { icon: Send, title: 'Veröffentlichen', text: 'Pro Kanal nach deiner Regel: automatisch, nach Freigabe oder gar nicht.' },
 ] as const
 
 const STATE_TEXT: Record<Exclude<AutomationState, 'auto'>, string> = {
   none: 'Neue Kanäle starten in der Freigabe-Queue. Ohne dein OK geht nichts online.',
-  manual: 'Clyp erstellt nur Clips. Veröffentlicht wird nichts.',
+  manual: 'Ocuris erstellt nur Clips. Veröffentlicht wird nichts.',
   review: 'Neue Clips warten in der Queue auf deine Freigabe.',
 }
 
@@ -26,7 +26,7 @@ const STATE_TEXT: Record<Exclude<AutomationState, 'auto'>, string> = {
  */
 export function AutomationFlow({ connected, total, state }: { connected: number; total: number; state: AutomationState }) {
   return (
-    <section aria-label="So arbeitet Clyp" className="glass-tile overflow-hidden rounded-[1.5rem]">
+    <section aria-label="So arbeitet Ocuris" className="glass-tile overflow-hidden rounded-2xl">
       <ol className="grid sm:grid-cols-3">
         {STEPS.map((step, index) => (
           <li

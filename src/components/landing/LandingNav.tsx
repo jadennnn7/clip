@@ -53,8 +53,8 @@ const LINK_CLASSES =
 
 /**
  * Hero-Navbar: eine schwebende Glas-Pille, die beim Scrollen unverändert
- * stehen bleibt — Marke, Kapitel-Links, Anmelden und Loslegen. Angemeldete
- * sehen statt der beiden „Zum Dashboard" rechts außen, außerhalb der Pille.
+ * stehen bleibt — Marke und Kapitel-Links. Rechts außen, außerhalb der
+ * Pille: Anmelden und Loslegen, für Angemeldete stattdessen „Zum Dashboard".
  */
 export function LandingNav({
   links,
@@ -72,44 +72,47 @@ export function LandingNav({
   return (
     <header className="pointer-events-none fixed inset-x-0 top-0 z-50 text-white">
       {/* Drei Spalten: Die Pille bleibt mittig, solange rechts Platz ist, und
-          weicht erst nach links, wenn „Zum Dashboard" sonst in sie liefe. */}
+          weicht erst nach links, wenn die Konto-Aktionen sonst in sie liefen. */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 pt-4">
         <AnimatedNav className="glass pointer-events-auto col-start-2 h-13 max-w-full px-2 py-1.5">
           <Link
             href="/"
-            className="flex shrink-0 rounded-full py-1 pr-4 pl-2 outline-none focus-visible:ring-2 focus-visible:ring-white/50 min-[60rem]:pr-6"
+            className="flex shrink-0 rounded-full py-0.5 pr-4 pl-1.5 outline-none focus-visible:ring-2 focus-visible:ring-white/50 min-[60rem]:pr-6"
           >
-            <BrandMark eager />
+            <BrandMark eager large />
           </Link>
 
-          <div className="hidden items-center gap-1 pr-3 md:flex min-[60rem]:gap-1.5">
+          <div className="hidden items-center gap-1 md:flex min-[60rem]:gap-1.5">
             {links.map((link) => (
               <Link key={link.href} href={link.href} className={LINK_CLASSES}>
                 {link.label}
               </Link>
             ))}
           </div>
-
-          {!signedIn && (
-            <>
-              <Link href="/dashboard" className={`${LINK_CLASSES} mr-1 hidden sm:block`}>
-                Anmelden
-              </Link>
-
-              {/* Derselbe blaue Tropfen wie „Gratis starten" im Hero. */}
-              <Link
-                href="/dashboard"
-                className="liquid liquid-brand group flex h-9 shrink-0 items-center gap-1.5 rounded-full pr-3.5 pl-4 text-[0.8125rem] font-semibold whitespace-nowrap outline-none transition-ui hover:brightness-[1.06] focus-visible:ring-2 focus-visible:ring-white/60"
-              >
-                Loslegen
-                <ArrowRight
-                  aria-hidden
-                  className="size-3.5 transition-transform duration-300 ease-(--ease-out-quint) group-hover:translate-x-0.5"
-                />
-              </Link>
-            </>
-          )}
         </AnimatedNav>
+
+        {/* Konto-Aktionen rechts außen, nicht in der Pille: Die Pille ist das
+            Inhaltsverzeichnis der Seite, Anmelden und Loslegen führen aus ihr
+            hinaus. Dieselbe Stelle wie „Zum Dashboard" für Angemeldete. */}
+        {!signedIn && (
+          <div className="pointer-events-auto col-start-3 flex items-center gap-1 justify-self-end">
+            <Link href="/dashboard" className={`${LINK_CLASSES} hidden sm:block`}>
+              Anmelden
+            </Link>
+
+            {/* Derselbe blaue Tropfen wie „Gratis starten" im Hero. */}
+            <Link
+              href="/dashboard"
+              className="liquid liquid-brand group flex h-10 shrink-0 items-center gap-1.5 rounded-full pr-3.5 pl-4 text-[0.8125rem] font-semibold whitespace-nowrap outline-none transition-ui hover:brightness-[1.06] focus-visible:ring-2 focus-visible:ring-white/60"
+            >
+              Loslegen
+              <ArrowRight
+                aria-hidden
+                className="size-3.5 transition-transform duration-300 ease-(--ease-out-quint) group-hover:translate-x-0.5"
+              />
+            </Link>
+          </div>
+        )}
 
         {/* Nur Schrift und Pfeil; der Rahmen kommt erst beim Hovern. Erscheint, sobald
             die Session gelesen ist — darum leise eingeblendet. */}

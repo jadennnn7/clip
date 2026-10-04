@@ -18,6 +18,7 @@ import { ScoreDistribution } from './ScoreDistribution'
 import { ScoreScatter } from './ScoreScatter'
 import { StatusList } from './StatusList'
 import { TrendChart } from './TrendChart'
+import { EDITOR_ENABLED } from '@/lib/features'
 import {
   filterPosts, formatCount, formatPercent, formatRelative, median, PERIODS, spearman, totals, TREND_METRICS, viewBuckets,
   type Period, type PlatformFilter, type TrendMetric,
@@ -98,7 +99,7 @@ export function AnalyticsView({ data, error, loading, refreshing, refresh }: Ret
     return {
       post,
       clip,
-      editorHref: project && clip ? `/dashboard/projects/${project.id}?clip=${clip.id}` : undefined,
+      editorHref: EDITOR_ENABLED && project && clip ? `/dashboard/projects/${project.id}?clip=${clip.id}` : undefined,
       sourceAspect: project?.width && project.height ? project.width / project.height : undefined,
     }
   })
@@ -141,7 +142,7 @@ export function AnalyticsView({ data, error, loading, refreshing, refresh }: Ret
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="mx-auto w-full max-w-6xl px-4 pt-8 pb-20 sm:px-6">
+      <div className="mx-auto w-full max-w-6xl px-4 pt-10 pb-20 sm:px-6">
         <header className="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
           <div className="min-w-0">
             <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>

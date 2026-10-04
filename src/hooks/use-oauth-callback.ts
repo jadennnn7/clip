@@ -8,7 +8,7 @@ import { PLATFORM_LABEL } from '@/lib/social-labels'
 const PLATFORMS: SocialPlatform[] = ['youtube', 'instagram', 'tiktok']
 
 const OAUTH_ERRORS: Record<string, string> = {
-  oauth_session_expired: 'Deine Clyp-Anmeldung fehlt oder ist abgelaufen. Melde dich auf dieser Adresse an und verbinde den Kanal erneut.',
+  oauth_session_expired: 'Deine Ocuris-Anmeldung fehlt oder ist abgelaufen. Melde dich auf dieser Adresse an und verbinde den Kanal erneut.',
   connection_failed: 'Die Kanalverbindung ist fehlgeschlagen. Bitte starte sie erneut.',
   token_exchange_failed: 'Die Plattform hat die Anmeldung nicht bestätigt. Bitte prüfe die OAuth-Zugangsdaten, die registrierte Callback-Adresse und den Zugriff deines Kontos auf die Plattform-App.',
   missing_permissions: 'Nicht alle nötigen Berechtigungen wurden freigegeben. Verbinde den Kanal erneut und bestätige alle Berechtigungen. Bei Instagram müssen sie außerdem in der Login-Konfiguration der Meta-App enthalten sein.',
@@ -68,7 +68,7 @@ function originMismatchMessage(): string {
   let host: string | null = null
   try { host = process.env.NEXT_PUBLIC_APP_URL ? new URL(process.env.NEXT_PUBLIC_APP_URL).host : null } catch { /* ungültig */ }
   const where = host ? `über ${host}` : 'über die eingerichtete App-Adresse'
-  const base = `Kanäle lassen sich nur ${where} verbinden. Öffne Clyp unter dieser Adresse, melde dich dort an und verbinde den Kanal erneut.`
+  const base = `Kanäle lassen sich nur ${where} verbinden. Öffne Ocuris unter dieser Adresse, melde dich dort an und verbinde den Kanal erneut.`
   return process.env.NODE_ENV === 'development'
     ? `${base} Ist die Adresse nicht mehr erreichbar (etwa ein beendeter Tunnel), NEXT_PUBLIC_APP_URL in .env.local anpassen, die Rückkehr-Adressen bei den Plattformen nachtragen und den Dev-Server neu starten.`
     : base

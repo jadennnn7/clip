@@ -88,7 +88,7 @@ test('a tunnel with an internal HTTP origin can initiate OAuth on the matching h
 })
 
 for (const callback of [false, true]) {
-  test(`missing Clyp session at ${callback ? 'callback' : 'start'} requests login without contacting provider`, async () => {
+  test(`missing Ocuris session at ${callback ? 'callback' : 'start'} requests login without contacting provider`, async () => {
     const state = setup({ authenticated: false })
     const response = await state.run(callback)
     const target = new URL(response.headers.get('location'))

@@ -12,7 +12,8 @@ import type { SubscriptionTier } from '@/types/database'
  * Ereignis zu trauen: Stripe stellt Ereignisse mehrfach und ungeordnet zu,
  * der aktuelle Stand ist aber immer derselbe. `apply_subscription` rechnet
  * daraus Kontingent und Gutschriften, `grant_token_pack` bucht Nachkäufe
- * einmal je Checkout-Session.
+ * einmal je Checkout-Session. `invoice.upcoming` lässt Jahresabos nach dem
+ * ersten Jahr monatlich weiterlaufen.
  */
 export async function POST(req: NextRequest) {
   const stripe = getStripe()
@@ -85,6 +86,13 @@ export async function POST(req: NextRequest) {
         break
       }
 
+      case 'invoice.upcoming': {
+        const invoice = event.data.object as Stripe.Invoice
+        const ref = invoice.parent?.subscription_details?.subscription
+        if (ref) await continueYearlyAsMonthly(stripe, typeof ref === 'string' ? ref : ref.id)
+        break
+      }
+
       case 'invoice.payment_failed':
         // Stripe versucht es erneut und setzt das Abo auf past_due; das
         // meldet customer.subscription.updated. Bis dahin bleibt das
@@ -103,14 +111,52 @@ export async function POST(req: NextRequest) {
   }
 }
 
+/** Monats- und Jahrespreis eines Tarifs geben dieselben Credits pro Monat. */
 function planForPrice(priceId: string): { tier: SubscriptionTier; credits: number } | null {
   for (const plan of PLANS) {
-    if (!plan.priceEnv) continue
-    if (priceId === process.env[plan.priceEnv]) {
+    const envs = [plan.priceEnv, plan.yearlyPriceEnv]
+    if (envs.some((name) => name && priceId === process.env[name])) {
       return { tier: plan.tier, credits: plan.credits }
     }
   }
   return null
+}
+
+/**
+ * Ein Jahresabo verlängert sich nicht um ein weiteres Jahr, sondern läuft
+ * als Monatsabo desselben Tarifs weiter — Verbraucherverträge dürfen sich
+ * stillschweigend nur auf unbestimmte Zeit mit monatlicher Kündigung
+ * verlängern (§ 309 Nr. 9 BGB).
+ *
+ * Stripe meldet `invoice.upcoming` einige Tage vor der Verlängerung. Erst
+ * dann kommt der Zeitplan an das Abo, nicht schon beim Kauf: Mit Zeitplan
+ * lässt das Kundenportal weder Wechsel noch Kündigung zu, und das soll nur
+ * für diese paar Tage gelten. Das laufende Jahr bleibt unverändert, danach
+ * gibt der Zeitplan das Abo mit dem Monatspreis frei.
+ */
+async function continueYearlyAsMonthly(stripe: Stripe, subscriptionId: string) {
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+  // Schon eingeplant (Stripe stellt Ereignisse mehrfach zu), gekündigt oder beendet.
+  if (subscription.schedule || subscription.cancel_at_period_end || subscription.cancel_at) return
+  if (subscription.status !== 'active' && subscription.status !== 'trialing') return
+  const item = subscription.items.data[0]
+  const plan = item && PLANS.find((entry) => entry.yearlyPriceEnv && item.price.id === process.env[entry.yearlyPriceEnv])
+  if (!plan) return
+  const monthlyPrice = plan.priceEnv ? process.env[plan.priceEnv] : undefined
+  if (!monthlyPrice) throw new Error(`${plan.priceEnv} fehlt — Jahresabo ${subscription.id} kann nicht ins Monatsabo übergehen`)
+
+  const schedule = await stripe.subscriptionSchedules.create({ from_subscription: subscription.id })
+  const current = schedule.phases[0]
+  if (!current) throw new Error(`Zeitplan ${schedule.id} ohne Phase`)
+  await stripe.subscriptionSchedules.update(schedule.id, {
+    end_behavior: 'release',
+    proration_behavior: 'none',
+    phases: [
+      { items: [{ price: item.price.id, quantity: 1 }], start_date: current.start_date, end_date: current.end_date },
+      { items: [{ price: monthlyPrice, quantity: 1 }], duration: { interval: 'month', interval_count: 1 } },
+    ],
+  })
+  console.log(`[stripe] Jahresabo ${subscription.id} läuft ab ${new Date(current.end_date * 1000).toISOString()} monatlich weiter`)
 }
 
 /** Profil zum Stripe-Kunden; die Supabase-ID aus den Metadaten als Rückfall für den ersten Kauf. */

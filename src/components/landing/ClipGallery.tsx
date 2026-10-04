@@ -6,14 +6,14 @@ interface Example {
   genre: string
   /** Datei in `public/gallery/`: `<slug>.mp4` und das Standbild `<slug>.jpg`. */
   slug: string
-  /** Der Titel, den Clyp dem Clip gegeben hat. */
+  /** Der Titel, den Ocuris dem Clip gegeben hat. */
   title: string
   score: number
   platform: SocialPlatform
 }
 
 /**
- * Echte Clips aus Clyp, je die ersten acht Sekunden, stumm. Untertitel sind
+ * Echte Clips aus Ocuris, je die ersten acht Sekunden, stumm. Untertitel sind
  * eingebrannt — die Karte legt deshalb keine eigenen darüber. Acht Genres,
  * damit man sieht: Es funktioniert mit allem, wo geredet wird.
  */
@@ -57,6 +57,7 @@ function ExampleCard({ example, duplicate }: { example: Example; duplicate: bool
         <div className="relative aspect-[9/16] overflow-hidden rounded-[1.35rem] bg-neutral-900 shadow-[0_28px_50px_-26px_rgb(0_0_0/0.9)] ring-1 ring-white/12">
           <GalleryVideo
             src={`/gallery/${example.slug}.mp4`}
+            smallSrc={`/gallery/small/${example.slug}.mp4`}
             poster={`/gallery/${example.slug}.jpg`}
             label={duplicate ? '' : `Beispielclip ${example.genre}: ${example.title}`}
           />
@@ -64,7 +65,7 @@ function ExampleCard({ example, duplicate }: { example: Example; duplicate: bool
 
           <div className="absolute inset-x-[5%] top-[4%] flex items-center justify-between">
             <span className="glass-chip inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[0.625rem] font-semibold tabular-nums">
-              <span className="size-1.5 rounded-full bg-emerald-400" />
+              <span className="size-1.5 rounded-full bg-brand" />
               {example.score}
             </span>
             <span className="glass-chip flex size-5 items-center justify-center rounded-full">

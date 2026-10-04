@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, Clock, FolderOpen, Scissors } from 'lucide-react'
+import { ArrowRight, Clock, FolderOpen } from 'lucide-react'
 import { ProcessingClipCard } from '@/components/clips/ProcessingClipCard'
 import { RecentClipCard } from '@/components/dashboard/RecentClipCard'
 import { QuickAccessNav } from '@/components/dashboard/QuickAccessNav'
@@ -34,14 +34,6 @@ export default function DashboardPage() {
   // Videos, die gerade geschnitten werden, stehen in der Reihe vorn.
   const processing = projects.filter((project) => isLinkProject(project) && ACTIVE_STATUSES.includes(project.status))
   const projectById = new Map(projects.map((project) => [project.id, project]))
-
-  const editorHref = recentClips[0]
-    ? `/dashboard/projects/${recentClips[0].project_id}?clip=${recentClips[0].id}`
-    : projects.find((p) => p.status === 'ready')
-      ? `/dashboard/projects/${projects.find((p) => p.status === 'ready')!.id}`
-      : projects[0]
-        ? `/dashboard/projects/${projects[0].id}`
-        : '/dashboard/editor'
 
   return <div className="h-full overflow-y-auto">
     <div className="relative mx-auto w-full max-w-5xl px-5 pt-10 pb-28 sm:px-10 sm:pt-20">
@@ -92,14 +84,6 @@ export default function DashboardPage() {
             title="Zuletzt bearbeitet"
             action={
               <div className="mr-1 flex items-center gap-2">
-                <Link
-                  href={editorHref}
-                  className="transition-ui inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
-                >
-                  <Scissors className="size-3" />
-                  Editor öffnen
-                </Link>
-                <span className="text-muted-foreground/30">·</span>
                 <Link
                   href="/dashboard/clips"
                   className="transition-ui inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"

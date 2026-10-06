@@ -202,6 +202,29 @@
   animation: rise-in 420ms var(--ease-out-quint) both;
 }
 
+/* Die Sidebar beim Laden: Kopf, Gruppen und Konto treten einmal leise vom
+   Rand herein, kurz nacheinander. Nur beim ersten Aufbau — Seitenwechsel
+   bauen die Leiste nicht neu, dort bleibt sie einfach stehen. */
+@keyframes sidebar-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.sidebar-in {
+  animation: sidebar-in 460ms var(--ease-out-quint) both;
+}
+
+.sidebar-in[data-slot='sidebar-group']:nth-child(1) { animation-delay: 60ms; }
+.sidebar-in[data-slot='sidebar-group']:nth-child(2) { animation-delay: 110ms; }
+.sidebar-in[data-slot='sidebar-group']:nth-child(3) { animation-delay: 160ms; }
+.sidebar-in[data-slot='sidebar-footer'] { animation-delay: 210ms; }
+
 /* Für große Schrift: taucht aus der Unschärfe auf, als würde sie hinter
    Glas scharf gestellt. Nicht für Elemente, die selbst Glas enthalten — ein
    `filter` am Vorfahren schneidet deren `backdrop-filter` vom Grund ab. */

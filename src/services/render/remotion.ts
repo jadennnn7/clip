@@ -119,6 +119,15 @@ export async function renderClipVideo({
       // Kompatibel mit jedem Player und jeder Plattform, auch Instagram.
       pixelFormat: 'yuv420p',
       outputLocation: outputPath,
+      // Auf dem Entwickler-Mac läuft neben dem Worker auch der Editor.
+      // Remotions CPU-basierte Defaults reservieren sonst mehrere GB Cache
+      // und starten mehrere Decoder/Browser gleichzeitig.
+      ...(process.platform === 'darwin' ? {
+        concurrency: 1,
+        offthreadVideoThreads: 1,
+        offthreadVideoCacheSizeInBytes: 256 * 1024 * 1024,
+        mediaCacheSizeInBytes: 128 * 1024 * 1024,
+      } : {}),
       cancelSignal,
       onProgress: ({ progress }) => onProgress?.(progress),
     })

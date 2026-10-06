@@ -16,6 +16,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     page('/', 1),
     ...(EDITOR_ENABLED ? [page('/demo', 0.7)] : []),
+    page('/partner', 0.6),
     page('/signup', 0.6),
     page('/login', 0.3),
     page('/konto-loeschen', 0.2),

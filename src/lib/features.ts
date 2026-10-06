@@ -9,7 +9,7 @@
  *
  * Zurückholen: auf `true` setzen.
  */
-export const EDITOR_ENABLED = false
+export const EDITOR_ENABLED = true
 
 /**
  * Wohin eine Editor-Adresse umleitet, solange der Editor aus ist — `null`

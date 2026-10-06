@@ -1,5 +1,7 @@
 'use client'
 
+import { clearPendingVideo } from '@/lib/pending-video'
+
 /**
  * Meldet dieses Gerät ab und lädt die Anmeldeseite komplett neu.
  *
@@ -19,6 +21,7 @@ export async function signOut(): Promise<void> {
     const data = await response.json().catch(() => null) as { error?: unknown } | null
     throw new Error(typeof data?.error === 'string' ? data.error : 'Die Abmeldung hat nicht geklappt. Bitte versuche es erneut.')
   }
+  clearPendingVideo()
   try { sessionStorage.clear() } catch { /* blockiert — dann gibt es auch nichts zu löschen */ }
   window.location.replace('/login?signed_out=1')
 }

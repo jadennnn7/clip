@@ -188,11 +188,19 @@ export const youtubeProvider: SocialProvider = {
     let offset = 0
 
     if (!uploadUrl) {
-      const head = await fetchResponse(videoUrl, { method: 'HEAD' }, 'Videospeicher')
-      if (!head.ok) throw providerError(head.status, {}, 'Videospeicher')
-      total = Number(head.headers.get('content-length'))
+      // Presigned S3/R2 URLs bind the HTTP method: a GET URL cannot serve HEAD.
+      // Read only one byte to discover the size without downloading the video.
+      const probe = await fetchResponse(videoUrl, { method: 'GET', headers: { Range: 'bytes=0-0' } }, 'Videospeicher')
+      await probe.body?.cancel()
+      if (!probe.ok) {
+        const error = providerError(probe.status, {}, 'Videospeicher')
+        throw error.kind === 'auth' ? new PublishError('Der Videospeicher hat den Download abgelehnt. Bitte den Auftrag erneut versuchen.', 'terminal') : error
+      }
+      const range = /^bytes 0-0\/(\d+)$/.exec(probe.headers.get('content-range') ?? '')
+      total = probe.status === 206 && range ? Number(range[1])
+        : probe.status === 200 ? Number(probe.headers.get('content-length')) : NaN
       if (!Number.isSafeInteger(total) || total <= 0) throw new PublishError('Der Videospeicher muss eine gültige Dateigröße liefern.', 'terminal')
-      await checkpoint.update({ youtube_total_bytes: String(total), youtube_source_etag: head.headers.get('etag') ?? '' })
+      await checkpoint.update({ youtube_total_bytes: String(total), youtube_source_etag: probe.headers.get('etag') ?? '' })
       uploadUrl = await createRemoteId(checkpoint, 'youtube_session_url', async () => {
         const response = await fetchResponse(UPLOAD_ENDPOINT, {
           method: 'POST', headers: { ...authorization(accessToken), 'Content-Type': 'application/json', 'X-Upload-Content-Length': String(total), 'X-Upload-Content-Type': 'video/mp4' },
@@ -210,7 +218,7 @@ export const youtubeProvider: SocialProvider = {
       // Reconcile before sending ANY bytes after a crash or ambiguous PUT response.
       const response = await fetchResponse(sessionUrl(uploadUrl), {
         method: 'PUT', headers: { ...authorization(accessToken), 'Content-Length': '0', 'Content-Range': `bytes */${total}` },
-      }, 'YouTube-Upload abgleichen')
+      }, 'YouTube-Upload abgleichen', false, 'manual')
       if (response.status === 200 || response.status === 201) {
         await saveVideo(response, checkpoint)
         return resultForVideo(accessToken, checkpoint.get('youtube_video_id')!)
@@ -234,7 +242,7 @@ export const youtubeProvider: SocialProvider = {
       // Session is durable: a network error is safe to retry via status reconciliation.
       const uploaded = await fetchResponse(sessionUrl(uploadUrl), {
         method: 'PUT', headers: { ...authorization(accessToken), 'Content-Type': 'video/mp4', 'Content-Length': String(bytes.byteLength), 'Content-Range': expectedRange }, body: bytes,
-      }, 'YouTube-Video hochladen')
+      }, 'YouTube-Video hochladen', false, 'manual')
       if (uploaded.status === 200 || uploaded.status === 201) { await saveVideo(uploaded, checkpoint); break }
       if (uploaded.status === 404 || uploaded.status === 410) throw new PublishError('YouTube-Upload-Sitzung nicht mehr verfügbar. Kanal vor erneutem Upload prüfen.', 'uncertain')
       if (uploaded.status !== 308) { await readJson(uploaded, 'YouTube-Video hochladen'); throw new PublishError('Unbekannte YouTube-Uploadantwort.', 'uncertain') }

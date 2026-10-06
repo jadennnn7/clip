@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { RotateCw } from 'lucide-react'
+import { PageHeader } from '@/components/dashboard/PageHeader'
 import { PlatformLogo } from '@/components/landing/PlatformLogo'
 import { Button } from '@/components/ui/button'
 import type { useAnalytics } from '@/lib/analytics-client'
@@ -143,42 +144,38 @@ export function AnalyticsView({ data, error, loading, refreshing, refresh }: Ret
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto w-full max-w-6xl px-4 pt-10 pb-20 sm:px-6">
-        <header className="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Veröffentlichte Clips auf allen Kanälen
-              {data ? ` · ${refreshing ? 'wird aktualisiert …' : `Stand ${formatRelative(data.fetchedAt, now)}`}` : ''}
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Segmented
-              label="Zeitraum"
-              value={period}
-              onChange={setPeriod}
-              options={PERIODS.map((entry) => ({ value: entry.value, label: entry.label }))}
-            />
-            {platforms.length > 1 ? (
+        <PageHeader
+          title="Analytics"
+          description={`Veröffentlichte Clips auf allen Kanälen${data ? ` · ${refreshing ? 'wird aktualisiert …' : `Stand ${formatRelative(data.fetchedAt, now)}`}` : ''}`}
+          action={
+            <div className="flex flex-wrap items-center gap-2">
               <Segmented
-                label="Plattform"
-                value={platform}
-                onChange={setPlatformChoice}
-                options={[
-                  { value: 'all' as PlatformFilter, label: 'Alle' },
-                  ...platforms.map((value) => ({
-                    value: value as PlatformFilter,
-                    ariaLabel: PLATFORM_LABEL[value],
-                    label: <><PlatformLogo platform={value} className="size-3.5" /><span className="max-md:hidden">{PLATFORM_LABEL[value].split(' ')[0]}</span></>,
-                  })),
-                ]}
+                label="Zeitraum"
+                value={period}
+                onChange={setPeriod}
+                options={PERIODS.map((entry) => ({ value: entry.value, label: entry.label }))}
               />
-            ) : null}
-            <Button variant="outline" size="icon" onClick={refresh} disabled={refreshing || loading} aria-label="Kennzahlen aktualisieren" title="Aktualisieren">
-              <RotateCw className={cn('size-3.5', refreshing && 'animate-spin')} />
-            </Button>
-          </div>
-        </header>
+              {platforms.length > 1 ? (
+                <Segmented
+                  label="Plattform"
+                  value={platform}
+                  onChange={setPlatformChoice}
+                  options={[
+                    { value: 'all' as PlatformFilter, label: 'Alle' },
+                    ...platforms.map((value) => ({
+                      value: value as PlatformFilter,
+                      ariaLabel: PLATFORM_LABEL[value],
+                      label: <><PlatformLogo platform={value} className="size-3.5" /><span className="max-md:hidden">{PLATFORM_LABEL[value].split(' ')[0]}</span></>,
+                    })),
+                  ]}
+                />
+              ) : null}
+              <Button variant="outline" size="icon" onClick={refresh} disabled={refreshing || loading} aria-label="Kennzahlen aktualisieren" title="Aktualisieren">
+                <RotateCw className={cn('size-3.5', refreshing && 'animate-spin')} />
+              </Button>
+            </div>
+          }
+        />
 
         <div className="flex flex-col gap-4">
           {loading && !data ? (

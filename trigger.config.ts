@@ -121,6 +121,7 @@ const WORKER_ENV = [
   'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'YOUTUBE_AUDIT_PASSED',
   'META_APP_ID', 'META_APP_SECRET', 'META_GRAPH_VERSION', 'META_APP_REVIEW_PASSED',
   'TIKTOK_CLIENT_KEY', 'TIKTOK_CLIENT_SECRET',
+  'TIKTOK_AUDIT_PASSED',
   // YouTube sperrt Rechenzentrums-IPs; siehe `youtubeAccessArgs` in services/video/source.ts.
   'YTDLP_PROXY', 'YTDLP_COOKIES_BASE64',
   // Konten ohne Credit- und Export-Grenzen; siehe `isAdmin` in services/billing/credits.ts.

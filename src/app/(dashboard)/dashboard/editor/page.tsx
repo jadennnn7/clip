@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { ArrowRight, Clock, FileVideo, Plus, Scissors, Sparkles } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { useWorkspaceStore } from '@/stores/workspace-store'
+import { PageHeader } from '@/components/dashboard/PageHeader'
 import { RecentClipCard } from '@/components/dashboard/RecentClipCard'
 import { mediaUrl } from '@/lib/link-import'
 import { useStartNewProject } from '@/components/dashboard/new-project'
@@ -33,22 +34,10 @@ export default function EditorHubPage() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-        {/* Kopfbereich */}
-        <header className="relative flex flex-wrap items-end justify-between gap-4 pb-8 border-b border-foreground/[0.08]">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="glass-chip inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-medium tracking-wide text-foreground/80 uppercase">
-                <Scissors className="size-3 text-muted-foreground" />
-                Schnittplatz
-              </span>
-            </div>
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Video-Editor</h1>
-            <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-              Schneide deine Videos Bild für Bild, passe Untertitel und Stile an, setze Overlays und rendere fertige Clips.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2.5">
+        <PageHeader
+          title="Video-Editor"
+          description="Schneide deine Videos Bild für Bild, passe Untertitel und Stile an, setze Overlays und rendere fertige Clips."
+          action={
             <Link
               href={quickEditorHref}
               className={buttonVariants({ variant: 'default' })}
@@ -56,11 +45,11 @@ export default function EditorHubPage() {
               <Scissors className="size-4" />
               Direkt zum Editor
             </Link>
-          </div>
-        </header>
+          }
+        />
 
         {/* Demo-Projekt Spotlight-Banner */}
-        <div className="relative mt-8 overflow-hidden rounded-[1.5rem] glass-tile p-6 sm:p-8">
+        <div className="relative overflow-hidden rounded-[1.5rem] glass-tile p-6 sm:p-8">
           <div
             aria-hidden
             className="pointer-events-none absolute -right-16 -bottom-16 size-64 rounded-full bg-white/10 dark:bg-white/5 blur-3xl"

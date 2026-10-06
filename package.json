@@ -17,7 +17,9 @@
     "remotion": "remotion studio remotion/index.ts",
     "test:schema": "bash scripts/test-schema.sh",
     "db:verify": "npx tsx scripts/verify-and-fix-db.ts",
-    "tokens:grant": "tsx --env-file=.env.local scripts/grant-tokens.ts"
+    "tokens:grant": "tsx --env-file=.env.local scripts/grant-tokens.ts",
+    "partner:payouts": "tsx --env-file=.env.local scripts/partner-payouts.ts",
+    "auth:set-password": "tsx --env-file=.env.local scripts/set-password.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1132.0",

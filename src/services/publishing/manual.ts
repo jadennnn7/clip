@@ -11,6 +11,9 @@ import { PublishingApiError } from './auth'
 import { getPublishingCapabilities } from './config'
 import { accountsWithinLimit, channelLimit, channelLimitMessage } from './limits'
 import { dispatchDuePublishingJobs } from './jobs'
+import { clipOutputDuration } from '@/lib/clip-export'
+import { checkTikTokPost } from './tiktok'
+import { tiktokPostSchema } from '@/lib/tiktok-post'
 
 /**
  * Veröffentlichen aus der Clip-Vorschau: ein Klick auf „Veröffentlichen"
@@ -56,6 +59,7 @@ export const manualPublishSchema = z.object({
   /** `null` = sofort. */
   publishAt: z.iso.datetime({ offset: true }).nullable(),
   caption: z.string().max(2200),
+  tiktokPosts: z.record(z.guid(), tiktokPostSchema).optional(),
 })
 
 export type ManualPublishInput = z.infer<typeof manualPublishSchema>
@@ -98,6 +102,12 @@ export async function publishClipManually(userId: string, input: ManualPublishIn
   const unavailable = accounts.find((account) => account.status !== 'active' || !capabilities[account.platform].configured)
   if (unavailable) throw new PublishingApiError(409, `Der Kanal ${unavailable.platform_username ?? unavailable.platform} ist nicht verbunden. Bitte verbinde ihn erneut.`)
 
+  for (const account of accounts.filter((value) => value.platform === 'tiktok')) {
+    const options = input.tiktokPosts?.[account.id]
+    if (!options) throw new PublishingApiError(400, 'Wähle die Sichtbarkeit und bestätige die direkte TikTok-Veröffentlichung in der Clip-Vorschau.')
+    await checkTikTokPost(userId, account.id, options, clipOutputDuration(input.clip))
+  }
+
   const source = await resolveSource(userId, input)
 
   // Was der Nutzer sieht, ist, was hochgeladen wird: ausgeblendete Wörter
@@ -124,7 +134,7 @@ export async function publishClipManually(userId: string, input: ManualPublishIn
       user_id: userId, source_job_id: source.sourceJobId, clip_index: clipIndex, account_id: account.id,
       clip, source_width: source.width, source_height: source.height, proxy_key: source.proxyKey,
       output_format: input.outputFormat, title: clip.title, status: 'pending', review_required: false,
-      checkpoint: { approved_at: now }, publish_at: publishAt.toISOString(),
+      checkpoint: { approved_at: now, ...(account.platform === 'tiktok' ? { tiktok_post_info: JSON.stringify(input.tiktokPosts![account.id]) } : {}) }, publish_at: publishAt.toISOString(),
     }))
     const { error } = await db.from('publishing_jobs').insert(rows)
     // Zwei gleichzeitige Klicks können denselben Index greifen — dann den nächsten.

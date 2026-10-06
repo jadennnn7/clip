@@ -79,11 +79,11 @@ export function ClipCard({
       >
         {selecting ? (
           <button type="button" onClick={onSelect} aria-pressed={selected} aria-label={`${clip.title} ${selected ? 'abwählen' : 'auswählen'}`} className="block size-full outline-none focus-visible:ring-3 focus-visible:ring-ring">
-            <ClipThumbnail clip={clip} previewSrc={previewSrc} sourceAspect={sourceAspect} outputFormat={outputFormat} showScore={false} captionSize={16} />
+            <ClipThumbnail clip={clip} previewSrc={previewSrc} sourceAspect={sourceAspect} outputFormat={outputFormat} showScore={false} showDuration={false} captionSize={16} />
           </button>
         ) : (
           <button type="button" onClick={onOpen} aria-label={`Clip ansehen: ${clip.title}`} className="block size-full cursor-pointer outline-none focus-visible:ring-3 focus-visible:ring-ring">
-            <ClipThumbnail clip={clip} previewSrc={previewSrc} sourceAspect={sourceAspect} outputFormat={outputFormat} showScore={false} captionSize={16} />
+            <ClipThumbnail clip={clip} previewSrc={previewSrc} sourceAspect={sourceAspect} outputFormat={outputFormat} showScore={false} showDuration={false} captionSize={16} />
           </button>
         )}
         <button

@@ -5,10 +5,10 @@ import Link from 'next/link'
 import { ArrowRight, Clock, FolderOpen } from 'lucide-react'
 import { ProcessingClipCard } from '@/components/clips/ProcessingClipCard'
 import { RecentClipCard } from '@/components/dashboard/RecentClipCard'
-import { QuickAccessNav } from '@/components/dashboard/QuickAccessNav'
 import { VideoLibrary } from '@/components/clips/VideoLibrary'
 import { ACTIVE_STATUSES, isLinkProject, mediaUrl } from '@/lib/link-import'
 import { IntakeBar } from '@/components/dashboard/IntakeBar'
+import { PublishTargets } from '@/components/dashboard/PublishTargets'
 import { EditorLinkDialog } from '@/components/dashboard/EditorLinkDialog'
 import { ScrollRow } from '@/components/dashboard/ScrollRow'
 import { useWorkspaceStore } from '@/stores/workspace-store'
@@ -46,6 +46,10 @@ export default function DashboardPage() {
       <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-40 h-[22rem] bg-[radial-gradient(ellipse_50%_55%_at_50%_40%,var(--brand-glow),transparent_72%)]" />
 
       <header className="relative mx-auto max-w-2xl text-center">
+        {/* Wohin die Clips gehen, bevor der Link kommt: Wer hier einen Kanal
+            ausschaltet, weiß beim Einfügen schon, was passiert. */}
+        <div className="rise-in mb-10 sm:mb-12"><PublishTargets /></div>
+
         {/* Verlauf in der Schrift: Die Zeile liest sich wie unter Glas, oben
             voll, unten leicht zurückgenommen. Die Pointe steht im Blau des
             Logos — wie „Null Aufwand." auf der Landing-Page. Im Hellen der
@@ -56,8 +60,6 @@ export default function DashboardPage() {
         </h1>
         
         <div className="rise-in mt-6" style={{ animationDelay: '80ms' }}><IntakeBar /></div>
-
-        <QuickAccessNav onEditorOpen={() => setEditorDialogOpen(true)} />
       </header>
 
       {/* Zuletzt Bearbeitetes vor dem Projektraster: Weitermachen ist häufiger

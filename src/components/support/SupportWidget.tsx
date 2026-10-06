@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { LOGO } from '@/lib/logo'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ArrowRight, ArrowUp, ChevronDown, Mail, Square, SquarePen, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ArrowUp, Check, ChevronDown, Loader2, Mail, Square, SquarePen, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   ASSISTANT_LINKS,
@@ -13,12 +13,10 @@ import {
   type AssistantLink,
   type AssistantMessage,
 } from '@/lib/assistant'
+import { SUPPORT_MESSAGE_MAX_LENGTH, SUPPORT_TRANSCRIPT_LIMIT } from '@/lib/support'
 import { cn } from '@/lib/utils'
 
 const STORAGE_KEY = 'clyp-support-chat'
-
-/** Ohne Adresse gibt es keinen Weg zu einem Menschen — dann fehlt die Zeile. */
-const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim() || null
 
 /**
  * Häufige Fragen je Bereich: Die Hilfe weiß, wo du gerade bist. Jede Frage
@@ -74,16 +72,30 @@ function isAssistantLink(value: unknown): value is AssistantLink {
   return typeof value === 'string' && value in ASSISTANT_LINKS
 }
 
-/** Verlauf aus dem Tab — kaputte oder fremde Einträge fallen still weg. */
+/**
+ * Verlauf aus dem Tab — kaputte oder fremde Einträge fallen still weg.
+ *
+ * Ebenso eine Frage am Ende, auf die keine Antwort folgt: Deren Anfrage
+ * starb mit der Seite (neu geladen, Dashboard verlassen) und kommt nicht
+ * mehr. Ohne sie zeigt das Fenster wieder den Startbildschirm statt einer
+ * Frage, die für immer unbeantwortet dasteht.
+ */
 function restoreMessages(): AssistantMessage[] {
   try {
     const stored = JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? '[]')
     if (!Array.isArray(stored)) return []
-    return stored.flatMap((item): AssistantMessage[] =>
+    const messages = stored.flatMap((item): AssistantMessage[] =>
       (item?.role === 'user' || item?.role === 'assistant') && typeof item.text === 'string'
-        ? [{ role: item.role, text: item.text, links: Array.isArray(item.links) ? item.links.filter(isAssistantLink) : undefined }]
+        ? [{
+            role: item.role,
+            text: item.text,
+            links: Array.isArray(item.links) ? item.links.filter(isAssistantLink) : undefined,
+            handoff: item.handoff === true || undefined,
+          }]
         : [],
     )
+    while (messages.at(-1)?.role === 'user') messages.pop()
+    return messages
   } catch {
     return []
   }
@@ -164,10 +176,14 @@ function Waveform({ className }: { className?: string }) {
  * Ocuris (`/api/assistant`); die Vorschläge passen zur Seite, auf der man ist.
  * Kommt eine Antwort, während das Fenster zu ist, zeigt der Tropfen sie an.
  *
+ * Kann die KI nicht helfen (`handoff`), oder will jemand lieber einen
+ * Menschen, schreibt er im selben Fenster an das Team (`/api/support`) — mit
+ * dem Chatverlauf, wenn er will. Die Antwort kommt per E-Mail.
+ *
  * Nutzt nur Theme-Tokens. Die Clip-Seite eines Projekts ist immer dunkel
  * (`ProjectClips`), dort ist es die Hilfe auch.
  */
-export function SupportWidget({ firstName }: { firstName?: string | null }) {
+export function SupportWidget({ firstName, email }: { firstName?: string | null; email?: string | null }) {
   const pathname = usePathname()
   const topic = topicFor(pathname)
   const alwaysDark = /^\/dashboard\/clips\/[^/]+/.test(pathname)
@@ -187,6 +203,9 @@ export function SupportWidget({ firstName }: { firstName?: string | null }) {
   const [unread, setUnread] = useState<string | null>(null)
   /** Zählt das Öffnen mit, damit der Startbildschirm jedes Mal neu hereinfließt. */
   const [visit, setVisit] = useState(0)
+  /** Chat mit der KI, Nachricht an das Team oder deren Bestätigung. */
+  const [view, setView] = useState<'chat' | 'contact' | 'sent'>('chat')
+  const [contactText, setContactText] = useState('')
   const openRef = useRef(false)
   const focusLauncher = useRef(false)
   const controller = useRef<AbortController | null>(null)
@@ -251,10 +270,13 @@ export function SupportWidget({ firstName }: { firstName?: string | null }) {
         body: JSON.stringify({ messages: history.map(({ role, text }) => ({ role, text })), page: pathname }),
         signal: current.signal,
       })
-      const data = (await response.json().catch(() => null)) as { answer?: string; links?: unknown[]; error?: string } | null
+      const data = (await response.json().catch(() => null)) as { answer?: string; links?: unknown[]; handoff?: boolean; error?: string } | null
       if (!response.ok || !data?.answer) throw new Error(data?.error ?? 'Der Assistent ist gerade nicht erreichbar.')
       const answer = data.answer
-      setMessages((previous) => [...(previous ?? []), { role: 'assistant', text: answer, links: data.links?.filter(isAssistantLink) }])
+      setMessages((previous) => [
+        ...(previous ?? []),
+        { role: 'assistant', text: answer, links: data.links?.filter(isAssistantLink), handoff: data.handoff === true || undefined },
+      ])
       setFresh(history.length)
       if (!openRef.current) setUnread(answer)
     } catch (cause) {
@@ -291,8 +313,15 @@ export function SupportWidget({ firstName }: { firstName?: string | null }) {
     setError(null)
     setFresh(null)
     setMessages([])
+    setView('chat')
     setVisit((count) => count + 1)
     input.current?.focus()
+  }
+
+  /** Zur Nachricht an das Team; aus der Übergabe mit der letzten Frage als Anfang. */
+  function openContact(prefill = '') {
+    setContactText((current) => current.trim() ? current : prefill)
+    setView('contact')
   }
 
   function openPanel() {
@@ -322,6 +351,8 @@ export function SupportWidget({ firstName }: { firstName?: string | null }) {
   }
 
   const lastIsQuestion = messages.at(-1)?.role === 'user'
+  const lastQuestion = messages.findLast((message) => message.role === 'user')?.text ?? ''
+  const handoff = !pending && !error && messages.at(-1)?.role === 'assistant' && messages.at(-1)?.handoff === true
 
   return (
     <aside ref={root} aria-label="Hilfe" className={cn('fixed right-3 bottom-3 z-40 text-foreground sm:right-6 sm:bottom-6', alwaysDark && 'dark')}>
@@ -417,9 +448,16 @@ export function SupportWidget({ firstName }: { firstName?: string | null }) {
             </span>
             <div className="min-w-0 flex-1">
               <p className="font-display text-[15px] leading-tight font-semibold tracking-tight">Ocuris Hilfe</p>
-              <p className="mt-0.5 truncate text-[11px] text-muted-foreground">KI-Assistent · antwortet in Sekunden</p>
+              <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                {view === 'chat' ? 'KI-Assistent · antwortet in Sekunden' : 'Das Team · antwortet per E-Mail'}
+              </p>
             </div>
-            {messages.length ? (
+            {view === 'chat' ? (
+              <Button variant="ghost" size="icon-sm" className="rounded-full text-muted-foreground" aria-label="An das Team schreiben" title="An das Team schreiben" onClick={() => openContact()}>
+                <Mail />
+              </Button>
+            ) : null}
+            {messages.length && view === 'chat' ? (
               <Button variant="ghost" size="icon-sm" className="rounded-full text-muted-foreground" aria-label="Neues Gespräch" title="Neues Gespräch" onClick={restart}>
                 <SquarePen />
               </Button>
@@ -429,158 +467,195 @@ export function SupportWidget({ firstName }: { firstName?: string | null }) {
             </Button>
           </header>
 
-          <div ref={scroller} className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 [scrollbar-width:thin]">
-            {messages.length === 0 ? (
-              <div key={visit} className="flex min-h-full flex-col justify-end gap-6 pb-3">
-                <div className="support-rise" style={{ '--rise-delay': '120ms' } as CSSProperties}>
-                  <p className="font-display text-[26px] leading-[1.12] font-semibold tracking-[-0.03em] text-balance">
-                    <span className="text-muted-foreground">Hallo{firstName ? ` ${firstName}` : ''},</span>
-                    <br />
-                    wobei kann ich helfen?
-                  </p>
-                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                    Frag nach Funktionen, Kanälen oder Credits — ich zeige dir den Weg.
-                  </p>
-                </div>
+          {view === 'chat' ? (
+            <>
+              <div ref={scroller} className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 [scrollbar-width:thin]">
+                {messages.length === 0 ? (
+                  <div key={visit} className="flex min-h-full flex-col justify-end gap-6 pb-3">
+                    <div className="support-rise" style={{ '--rise-delay': '120ms' } as CSSProperties}>
+                      <p className="font-display text-[26px] leading-[1.12] font-semibold tracking-[-0.03em] text-balance">
+                        <span className="text-muted-foreground">Hallo{firstName ? ` ${firstName}` : ''},</span>
+                        <br />
+                        wobei kann ich helfen?
+                      </p>
+                      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                        Frag nach Funktionen, Kanälen oder Credits — ich zeige dir den Weg.
+                      </p>
+                    </div>
 
-                <section aria-label={`Häufig gefragt: ${topic.label}`} className="support-rise" style={{ '--rise-delay': '200ms' } as CSSProperties}>
-                  <p className="mb-2 px-1 text-[11px] font-medium text-muted-foreground">
-                    Häufig gefragt · <span className="text-primary">{topic.label}</span>
-                  </p>
-                  <ul className="divide-y divide-foreground/[0.06] overflow-hidden rounded-2xl bg-foreground/[0.035] ring-1 ring-foreground/[0.06]">
-                    {topic.questions.map((question) => (
-                      <li key={question}>
+                    <section aria-label={`Häufig gefragt: ${topic.label}`} className="support-rise" style={{ '--rise-delay': '200ms' } as CSSProperties}>
+                      <p className="mb-2 px-1 text-[11px] font-medium text-muted-foreground">
+                        Häufig gefragt · <span className="text-primary">{topic.label}</span>
+                      </p>
+                      <ul className="divide-y divide-foreground/[0.06] overflow-hidden rounded-2xl bg-foreground/[0.035] ring-1 ring-foreground/[0.06]">
+                        {topic.questions.map((question) => (
+                          <li key={question}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                send(question)
+                                // Der Knopf verschwindet mit dem Startbildschirm — der Fokus gehört ins Eingabefeld.
+                                input.current?.focus({ preventScroll: true })
+                              }}
+                              className="group flex w-full items-center justify-between gap-3 px-3.5 py-3 text-left text-[13px] transition-colors outline-none hover:bg-foreground/[0.05] focus-visible:bg-foreground/[0.05] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                            >
+                              {question}
+                              <ArrowRight
+                                className="size-3.5 shrink-0 text-muted-foreground transition-[color,translate] duration-300 ease-[var(--ease-spring)] group-hover:translate-x-0.5 group-hover:text-primary"
+                                aria-hidden
+                              />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+
+                    <button
+                      type="button"
+                      onClick={() => openContact()}
+                      className="support-rise group flex items-center gap-3 rounded-2xl px-3.5 py-3 text-left ring-1 ring-foreground/[0.06] transition-colors outline-none hover:bg-foreground/[0.04] focus-visible:ring-2 focus-visible:ring-ring"
+                      style={{ '--rise-delay': '280ms' } as CSSProperties}
+                    >
+                      <Mail className="size-4 shrink-0 text-primary" aria-hidden />
+                      <span className="min-w-0 flex-1 text-[13px]">
+                        Lieber mit einem Menschen?
+                        <span className="block truncate text-xs text-muted-foreground">Schreib dem Team, wir antworten per E-Mail</span>
+                      </span>
+                      <ArrowRight className="size-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden />
+                    </button>
+                  </div>
+                ) : (
+                  <ol className="flex flex-col gap-4 py-3" aria-live="polite" aria-relevant="additions">
+                    {messages.map((message, index) => {
+                      const isLast = index === messages.length - 1 && !pending && !error
+                      if (message.role === 'user') {
+                        return (
+                          <li
+                            key={index}
+                            ref={isLast ? lastItem : undefined}
+                            className="support-send ml-auto max-w-[85%] rounded-[1.15rem] rounded-br-md bg-primary px-3.5 py-2 text-[13px] leading-relaxed break-words whitespace-pre-wrap text-primary-foreground"
+                          >
+                            {message.text}
+                          </li>
+                        )
+                      }
+                      const revealing = index === fresh && open
+                      return (
+                        <li key={index} ref={isLast ? lastItem : undefined} className="flex gap-2.5">
+                          <OcurisAvatar className="mt-px" />
+                          <div className="min-w-0 flex-1 pt-0.5 text-[13px] leading-relaxed break-words whitespace-pre-line">
+                            {revealing ? <Reveal text={message.text} /> : message.text}
+                            {message.links?.length ? (
+                              <div
+                                className={cn('mt-2.5 flex flex-wrap gap-1.5', revealing && 'support-rise')}
+                                style={revealing ? ({ '--rise-delay': `${revealDuration(message.text)}ms` } as CSSProperties) : undefined}
+                              >
+                                {message.links.map((href) => (
+                                  <Link
+                                    key={href}
+                                    href={href}
+                                    onClick={() => setOpen(false)}
+                                    className="group inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary ring-1 ring-primary/20 transition-colors outline-none hover:bg-primary/15 focus-visible:ring-2 focus-visible:ring-ring"
+                                  >
+                                    {ASSISTANT_LINKS[href]}
+                                    <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" aria-hidden />
+                                  </Link>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
+                        </li>
+                      )
+                    })}
+                    {pending ? (
+                      <li className="support-rise flex items-center gap-2.5" aria-label="Ocuris schreibt">
+                        <OcurisAvatar />
+                        <span className="flex items-center gap-2.5 rounded-full bg-foreground/[0.05] py-2 pr-3.5 pl-3 ring-1 ring-foreground/[0.06]">
+                          <Waveform />
+                          <span className="text-shimmer text-xs">Ocuris sucht die Antwort …</span>
+                        </span>
+                      </li>
+                    ) : null}
+                    {handoff ? (
+                      <li className="support-rise ml-8" style={{ '--rise-delay': `${fresh === messages.length - 1 && open ? revealDuration(messages.at(-1)!.text) : 0}ms` } as CSSProperties}>
                         <button
                           type="button"
-                          onClick={() => {
-                            send(question)
-                            // Der Knopf verschwindet mit dem Startbildschirm — der Fokus gehört ins Eingabefeld.
-                            input.current?.focus({ preventScroll: true })
-                          }}
-                          className="group flex w-full items-center justify-between gap-3 px-3.5 py-3 text-left text-[13px] transition-colors outline-none hover:bg-foreground/[0.05] focus-visible:bg-foreground/[0.05] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                          onClick={() => openContact(lastQuestion)}
+                          className="group flex w-full items-center gap-3 rounded-2xl bg-primary/[0.07] px-3.5 py-3 text-left ring-1 ring-primary/25 transition-colors outline-none hover:bg-primary/[0.11] focus-visible:ring-2 focus-visible:ring-ring"
                         >
-                          {question}
-                          <ArrowRight
-                            className="size-3.5 shrink-0 text-muted-foreground transition-[color,translate] duration-300 ease-[var(--ease-spring)] group-hover:translate-x-0.5 group-hover:text-primary"
-                            aria-hidden
-                          />
+                          <Mail className="size-4 shrink-0 text-primary" aria-hidden />
+                          <span className="min-w-0 flex-1 text-[13px] font-medium">
+                            An das Team schreiben
+                            <span className="block text-xs font-normal text-muted-foreground">Mit diesem Chatverlauf, Antwort per E-Mail</span>
+                          </span>
+                          <ArrowRight className="size-3.5 shrink-0 text-primary transition-transform group-hover:translate-x-0.5" aria-hidden />
                         </button>
                       </li>
-                    ))}
-                  </ul>
-                </section>
-
-                {SUPPORT_EMAIL ? (
-                  <a
-                    href={`mailto:${SUPPORT_EMAIL}`}
-                    className="support-rise group flex items-center gap-3 rounded-2xl px-3.5 py-3 ring-1 ring-foreground/[0.06] transition-colors outline-none hover:bg-foreground/[0.04] focus-visible:ring-2 focus-visible:ring-ring"
-                    style={{ '--rise-delay': '280ms' } as CSSProperties}
-                  >
-                    <Mail className="size-4 shrink-0 text-primary" aria-hidden />
-                    <span className="min-w-0 flex-1 text-[13px]">
-                      Lieber mit einem Menschen?
-                      <span className="block truncate text-xs text-muted-foreground">{SUPPORT_EMAIL}</span>
-                    </span>
-                    <ArrowRight className="size-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden />
-                  </a>
-                ) : null}
-              </div>
-            ) : (
-              <ol className="flex flex-col gap-4 py-3" aria-live="polite" aria-relevant="additions">
-                {messages.map((message, index) => {
-                  const isLast = index === messages.length - 1 && !pending && !error
-                  if (message.role === 'user') {
-                    return (
-                      <li
-                        key={index}
-                        ref={isLast ? lastItem : undefined}
-                        className="support-send ml-auto max-w-[85%] rounded-[1.15rem] rounded-br-md bg-primary px-3.5 py-2 text-[13px] leading-relaxed break-words whitespace-pre-wrap text-primary-foreground"
-                      >
-                        {message.text}
-                      </li>
-                    )
-                  }
-                  const revealing = index === fresh && open
-                  return (
-                    <li key={index} ref={isLast ? lastItem : undefined} className="flex gap-2.5">
-                      <OcurisAvatar className="mt-px" />
-                      <div className="min-w-0 flex-1 pt-0.5 text-[13px] leading-relaxed break-words whitespace-pre-line">
-                        {revealing ? <Reveal text={message.text} /> : message.text}
-                        {message.links?.length ? (
-                          <div
-                            className={cn('mt-2.5 flex flex-wrap gap-1.5', revealing && 'support-rise')}
-                            style={revealing ? ({ '--rise-delay': `${revealDuration(message.text)}ms` } as CSSProperties) : undefined}
-                          >
-                            {message.links.map((href) => (
-                              <Link
-                                key={href}
-                                href={href}
-                                onClick={() => setOpen(false)}
-                                className="group inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary ring-1 ring-primary/20 transition-colors outline-none hover:bg-primary/15 focus-visible:ring-2 focus-visible:ring-ring"
-                              >
-                                {ASSISTANT_LINKS[href]}
-                                <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" aria-hidden />
-                              </Link>
-                            ))}
-                          </div>
-                        ) : null}
-                      </div>
-                    </li>
-                  )
-                })}
-                {pending ? (
-                  <li className="support-rise flex items-center gap-2.5" aria-label="Ocuris schreibt">
-                    <OcurisAvatar />
-                    <span className="flex items-center gap-2.5 rounded-full bg-foreground/[0.05] py-2 pr-3.5 pl-3 ring-1 ring-foreground/[0.06]">
-                      <Waveform />
-                      <span className="text-shimmer text-xs">Ocuris sucht die Antwort …</span>
-                    </span>
-                  </li>
-                ) : null}
-                {error ? (
-                  <li role="alert" className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                    <span>{error}</span>
-                    {lastIsQuestion ? (
-                      <button type="button" onClick={() => void ask(messages)} className="font-medium underline underline-offset-2">
-                        Erneut versuchen
-                      </button>
                     ) : null}
-                  </li>
-                ) : null}
-              </ol>
-            )}
-          </div>
+                    {error ? (
+                      <li role="alert" className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                        <span>{error}</span>
+                        {lastIsQuestion ? (
+                          <button type="button" onClick={() => void ask(messages)} className="font-medium underline underline-offset-2">
+                            Erneut versuchen
+                          </button>
+                        ) : null}
+                        <button type="button" onClick={() => openContact(lastQuestion)} className="font-medium underline underline-offset-2">
+                          An das Team schreiben
+                        </button>
+                      </li>
+                    ) : null}
+                  </ol>
+                )}
+              </div>
 
-          <form onSubmit={onSubmit} className="relative px-3 pt-2 pb-3">
-            <div className="glass-field flex items-end gap-2 rounded-[1.25rem] p-1.5 pl-3.5 transition-shadow focus-within:ring-2 focus-within:ring-primary/35">
-              <textarea
-                ref={input}
-                rows={1}
-                value={draft}
-                maxLength={ASSISTANT_MESSAGE_MAX_LENGTH}
-                onChange={(event) => setDraft(event.target.value)}
-                onKeyDown={onComposerKeyDown}
-                placeholder="Frag etwas zu Ocuris …"
-                aria-label="Deine Frage"
-                className="max-h-28 min-h-8 flex-1 resize-none bg-transparent py-1.5 text-[13px] leading-5 outline-none [field-sizing:content] placeholder:text-muted-foreground"
-              />
-              {pending ? (
-                <button type="button" onClick={stop} aria-label="Antwort stoppen" className="liquid liquid-press flex size-8 shrink-0 items-center justify-center rounded-full">
-                  <Square className="size-3 fill-current" aria-hidden />
-                </button>
-              ) : (
-                <button
-                  type="submit"
-                  disabled={!draft.trim()}
-                  aria-label="Frage senden"
-                  className="liquid liquid-press flex size-8 shrink-0 items-center justify-center rounded-full transition-opacity disabled:opacity-25"
-                >
-                  <ArrowUp className="size-4" aria-hidden />
-                </button>
-              )}
-            </div>
-            <p className="mt-2 text-center text-[10px] text-muted-foreground">KI-Antworten können Fehler enthalten.</p>
-          </form>
+              <form onSubmit={onSubmit} className="relative px-3 pt-2 pb-3">
+                <div className="glass-field flex items-end gap-2 rounded-[1.25rem] p-1.5 pl-3.5 transition-shadow focus-within:ring-2 focus-within:ring-primary/35">
+                  <textarea
+                    ref={input}
+                    rows={1}
+                    value={draft}
+                    maxLength={ASSISTANT_MESSAGE_MAX_LENGTH}
+                    onChange={(event) => setDraft(event.target.value)}
+                    onKeyDown={onComposerKeyDown}
+                    placeholder="Frag etwas zu Ocuris …"
+                    aria-label="Deine Frage"
+                    className="max-h-28 min-h-8 flex-1 resize-none bg-transparent py-1.5 text-[13px] leading-5 outline-none [field-sizing:content] placeholder:text-muted-foreground"
+                  />
+                  {pending ? (
+                    <button type="button" onClick={stop} aria-label="Antwort stoppen" className="liquid liquid-press flex size-8 shrink-0 items-center justify-center rounded-full">
+                      <Square className="size-3 fill-current" aria-hidden />
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      disabled={!draft.trim()}
+                      aria-label="Frage senden"
+                      className="liquid liquid-press flex size-8 shrink-0 items-center justify-center rounded-full transition-opacity disabled:opacity-25"
+                    >
+                      <ArrowUp className="size-4" aria-hidden />
+                    </button>
+                  )}
+                </div>
+                <p className="mt-2 text-center text-[10px] text-muted-foreground">KI-Antworten können Fehler enthalten.</p>
+              </form>
+            </>
+          ) : (
+            <SupportContact
+              key={view}
+              view={view}
+              email={email ?? null}
+              text={contactText}
+              onTextChange={setContactText}
+              transcript={messages}
+              page={pathname}
+              onSent={() => {
+                setContactText('')
+                setView('sent')
+              }}
+              onBack={() => setView('chat')}
+            />
+          )}
         </div>
       </div>
 
@@ -588,5 +663,144 @@ export function SupportWidget({ firstName }: { firstName?: string | null }) {
         <span aria-hidden className="support-pop absolute -top-0.5 -right-0.5 size-3.5 rounded-full bg-foreground ring-[2.5px] ring-background" />
       ) : null}
     </aside>
+  )
+}
+
+/**
+ * Nachricht an das Team — im selben Fenster wie der Chat. Absender ist das
+ * angemeldete Konto, die Antwort kommt per E-Mail. Der Chatverlauf geht nur
+ * mit, wenn das Häkchen gesetzt ist.
+ */
+function SupportContact({ view, email, text, onTextChange, transcript, page, onSent, onBack }: {
+  view: 'contact' | 'sent'
+  email: string | null
+  text: string
+  onTextChange: (text: string) => void
+  transcript: AssistantMessage[]
+  page: string
+  onSent: () => void
+  onBack: () => void
+}) {
+  const [withTranscript, setWithTranscript] = useState(true)
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const field = useRef<HTMLTextAreaElement>(null)
+  const checkboxId = useId()
+  const recent = transcript.slice(-SUPPORT_TRANSCRIPT_LIMIT)
+  const address = email ? <span className="font-medium text-foreground">{email}</span> : 'die Adresse deines Kontos'
+
+  useEffect(() => {
+    const element = field.current
+    if (!element) return
+    element.focus({ preventScroll: true })
+    // Vorausgefüllt aus dem Chat: Weiterschreiben am Ende, nicht davor.
+    element.setSelectionRange(element.value.length, element.value.length)
+  }, [])
+
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    const message = text.trim()
+    if (!message || pending) return
+    setPending(true)
+    setError(null)
+    try {
+      const response = await fetch('/api/support', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message,
+          transcript: withTranscript ? recent.map(({ role, text: entry }) => ({ role, text: entry })) : [],
+          page,
+        }),
+      })
+      const data = (await response.json().catch(() => null)) as { error?: string } | null
+      if (!response.ok) throw new Error(data?.error ?? 'Deine Nachricht konnte nicht gesendet werden.')
+      onSent()
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Deine Nachricht konnte nicht gesendet werden.')
+      setPending(false)
+    }
+  }
+
+  if (view === 'sent') {
+    return (
+      <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center px-6 pb-6 text-center">
+        <span className="support-rise grid size-12 place-content-center rounded-full bg-primary/10 ring-1 ring-primary/30">
+          <Check className="size-5 text-primary" aria-hidden />
+        </span>
+        <p role="status" className="support-rise mt-4 font-display text-xl font-semibold tracking-tight" style={{ '--rise-delay': '80ms' } as CSSProperties}>
+          Nachricht ist angekommen
+        </p>
+        <p className="support-rise mt-1.5 max-w-[16rem] text-xs leading-relaxed text-muted-foreground" style={{ '--rise-delay': '140ms' } as CSSProperties}>
+          Wir antworten dir per E-Mail an {address}.
+        </p>
+        <Button variant="outline" size="sm" className="support-rise mt-5 rounded-full" style={{ '--rise-delay': '200ms' } as CSSProperties} onClick={onBack}>
+          Zurück zum Chat
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <form onSubmit={submit} className="relative flex min-h-0 flex-1 flex-col">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-2 [scrollbar-width:thin]">
+        <div className="support-rise pt-1">
+          <p className="font-display text-[22px] leading-[1.15] font-semibold tracking-[-0.03em]">Nachricht an das Team</p>
+          <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+            Ein Mensch liest mit. Wir antworten per E-Mail an {address}.
+          </p>
+        </div>
+
+        <textarea
+          ref={field}
+          value={text}
+          maxLength={SUPPORT_MESSAGE_MAX_LENGTH}
+          onChange={(event) => onTextChange(event.target.value)}
+          placeholder="Was ist passiert? Je genauer, desto schneller können wir helfen."
+          aria-label="Dein Anliegen"
+          className="glass-field support-rise mt-4 block min-h-36 w-full resize-none rounded-2xl px-3.5 py-3 text-[13px] leading-5 outline-none [field-sizing:content] placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary/35"
+          style={{ '--rise-delay': '60ms' } as CSSProperties}
+        />
+
+        {recent.length ? (
+          <div className="support-rise mt-3 flex items-center gap-2.5 text-xs" style={{ '--rise-delay': '120ms' } as CSSProperties}>
+            <input
+              id={checkboxId}
+              type="checkbox"
+              checked={withTranscript}
+              onChange={(event) => setWithTranscript(event.target.checked)}
+              className="size-4 shrink-0 accent-[var(--primary)]"
+            />
+            <label htmlFor={checkboxId} className="cursor-pointer">
+              Chatverlauf mitschicken ({recent.length} {recent.length === 1 ? 'Nachricht' : 'Nachrichten'})
+            </label>
+          </div>
+        ) : null}
+
+        {error ? (
+          <p role="alert" className="mt-3 rounded-xl bg-destructive/10 px-3 py-2 text-xs text-destructive">{error}</p>
+        ) : null}
+
+        <p className="mt-3 text-[10px] leading-relaxed text-muted-foreground">
+          Wir speichern deine Nachricht, um sie zu beantworten.{' '}
+          <Link href="/datenschutz#m182" className="underline underline-offset-2 hover:text-foreground">Datenschutz</Link>
+        </p>
+      </div>
+
+      <div className="flex items-center gap-2 px-3 pt-2 pb-3">
+        <Button type="button" variant="ghost" size="sm" className="gap-1.5 rounded-full text-muted-foreground" onClick={onBack}>
+          <ArrowLeft className="size-4" aria-hidden />
+          Zurück
+        </Button>
+        <button
+          type="submit"
+          disabled={!text.trim() || pending}
+          className="liquid liquid-press ml-auto flex h-9 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold transition-opacity disabled:opacity-40"
+        >
+          {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <ArrowUp className="size-4" aria-hidden />}
+          Senden
+        </button>
+      </div>
+    </form>
   )
 }

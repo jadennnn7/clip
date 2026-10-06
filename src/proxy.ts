@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { EDITOR_ENABLED, editorRedirect } from '@/lib/features'
+import { rememberReferral } from '@/lib/referral'
 import { updateSession } from '@/lib/supabase/proxy'
 
 /**
@@ -11,7 +12,8 @@ export async function proxy(request: NextRequest) {
   // oder gemerkte Editor-Adressen kommen nicht mehr hinein.
   const editorTarget = EDITOR_ENABLED ? null : editorRedirect(request.nextUrl.pathname)
   if (editorTarget) return NextResponse.redirect(new URL(editorTarget, request.url))
-  return updateSession(request)
+  // Partnerlink (`?ref=`): Code merken, dann zur Adresse ohne Parameter.
+  return rememberReferral(request) ?? updateSession(request)
 }
 
 export const config = {
@@ -21,6 +23,6 @@ export const config = {
      * sitemap.xml brauchen keinen Session-Refresh — und müssen ohne Konto
      * erreichbar sein (das Demo-Video der Landingpage, Suchmaschinen).
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff2?|mp4|webm|mp3|txt|xml)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff2?|mp4|webm|mp3|txt|xml|pdf)$).*)',
   ],
 }

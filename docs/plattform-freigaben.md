@@ -123,29 +123,34 @@ Im TikTok-Developer-Portal der App von `TIKTOK_CLIENT_KEY`:
 1. App-Details: Name, Symbol, Kategorie, Beschreibung, Website-URL,
    Datenschutz- und AGB-URL.
 2. Produkte: **Login Kit** und **Content Posting API**. Ocuris nutzt die
-   Bereiche `user.info.basic` und `video.upload`: Clips landen in der
-   TikTok-Inbox des Nutzers, veröffentlicht wird in der TikTok-App. Direktes
-   Veröffentlichen (`video.publish`) ist nicht eingebaut und wird deshalb auch
-   nicht beantragt.
+   Bereiche `user.info.basic` und `video.publish`. In der Content Posting API
+   **Direct Post** aktivieren. Bestehende Verbindungen anschließend erneut
+   autorisieren, damit sie `video.publish` erhalten.
 3. **Domain bzw. URL-Präfix verifizieren**, von dem TikTok die Videos abholt:
    die Domain aus `R2_PUBLIC_BASE_URL` (Verifizierung per DNS-TXT-Eintrag oder
    Datei).
-4. Demo-Video: Anmeldung → „Mit TikTok verbinden“ → Zustimmung → Clip
-   veröffentlichen → Clip erscheint in der TikTok-Inbox.
-5. Zur Prüfung einreichen.
+4. Demo-Video: Anmeldung → „Mit TikTok verbinden“ → Berechtigungen bestätigen →
+   Clip-Vorschau → Beschreibung bearbeiten → Creator-Konto und verfügbare
+   Sichtbarkeiten zeigen → Interaktionen und Werbekennzeichnung wählen →
+   Musiknutzung und Veröffentlichung bestätigen → „Jetzt veröffentlichen“ →
+   Verarbeitungsstatus und Ergebnis auf dem TikTok-Profil zeigen.
+5. Zunächst private Testposts (`SELF_ONLY`) auf einem privaten TikTok-Konto
+   testen. Für öffentliche Direct Posts das TikTok-App-Audit beantragen.
+   Erst nach erfolgreichem Audit `TIKTOK_AUDIT_PASSED=true` in App und Worker
+   setzen. Ein aktivierter Scope allein schaltet öffentliche Posts nicht frei.
 
 Begründungen (englisch):
 
 > **user.info.basic** — Shows the connected TikTok account's display name and
 > avatar so the user knows where clips will be sent.
 >
-> **video.upload** — Sends a finished clip to the user's TikTok inbox when they
-> click "Publish" in Ocuris. The user reviews, edits, and posts it in the TikTok
-> app themselves; Ocuris never posts publicly on the user's behalf.
+> **video.publish** — Publishes the creator's edited clip directly to their TikTok
+> profile after they select visibility, interaction and content disclosure
+> settings, review the preview and caption, and explicitly confirm the post.
 
 ## 4. Nach den Freigaben
 
-1. Flags setzen (`YOUTUBE_AUDIT_PASSED`, `META_APP_REVIEW_PASSED`) — in Vercel
+1. Flags setzen (`YOUTUBE_AUDIT_PASSED`, `META_APP_REVIEW_PASSED`, `TIKTOK_AUDIT_PASSED`) — in Vercel
    **und** Trigger.dev, beide neu deployen.
 2. `npm run publishing:check` zeigt die Plattformen dann als bereit.
 3. Mit einem eigenen Testclip je Plattform einmal den ganzen Weg gehen

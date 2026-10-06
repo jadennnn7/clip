@@ -50,8 +50,8 @@ const stagger = (index: number) => ({ '--i': index }) as React.CSSProperties
 /**
  * Tarife aus `PLANS`, monatlich oder jährlich. Die Wahl erscheint erst, wenn
  * die Jahrespreise in Stripe eingerichtet sind (`yearlyAvailable`, vom
- * Server); vorher bleibt es bei Monatspreisen. Monatlich ist vorgewählt —
- * der Hero verspricht „Monatlich kündbar".
+ * Server); vorher bleibt es bei Monatspreisen. Jährlich ist vorgewählt,
+ * sofern buchbar — der Schalter hebt die 20 % Ersparnis hervor.
  *
  * Alles im Logo-Blau statt im Standard-Blau der Vorlage: Der empfohlene Tarif
  * hebt sich über echtes Glas mit blau aufleuchtender Kante und eine
@@ -61,9 +61,17 @@ const stagger = (index: number) => ({ '--i': index }) as React.CSSProperties
  * Die Karten unterscheiden sich nur in Credits und Kanälen — mehr trennt die
  * Tarife auch nicht. Was alle können, steht einmal darunter.
  */
-export function PricingSection({ yearlyAvailable = false }: { yearlyAvailable?: boolean }) {
+export function PricingSection({
+  yearlyAvailable = false,
+  initialInterval,
+}: {
+  yearlyAvailable?: boolean
+  initialInterval?: BillingInterval
+}) {
   const featuredIndex = PLANS.findIndex((plan) => plan.tier === FEATURED_TIER)
-  const [interval, setBillingInterval] = React.useState<BillingInterval>('month')
+  const defaultInterval: BillingInterval = initialInterval ?? (yearlyAvailable ? 'year' : 'month')
+  const [selectedInterval, setBillingInterval] = React.useState<BillingInterval | null>(null)
+  const interval: BillingInterval = yearlyAvailable ? (selectedInterval ?? defaultInterval) : 'month'
 
   return (
     <MotionConfig reducedMotion="user">

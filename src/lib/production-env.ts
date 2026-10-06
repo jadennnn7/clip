@@ -88,6 +88,9 @@ export function checkProductionEnv(env: Env, targets: ProductionTarget[]): EnvIs
     else if (stripe.startsWith('sk_test_')) warning('STRIPE_SECRET_KEY', 'ist ein Test-Schlüssel — es wird kein echtes Geld abgebucht')
     if (stripe && !value('STRIPE_WEBHOOK_SECRET')) error('STRIPE_WEBHOOK_SECRET', 'fehlt — ohne Webhook werden bezahlte Abos nie freigeschaltet')
     if (!value('NEXT_PUBLIC_SENTRY_DSN')) warning('NEXT_PUBLIC_SENTRY_DSN', 'fehlt — Fehler bei Kunden landen nur im Server-Log, niemand wird benachrichtigt')
+    if (!value('RESEND_API_KEY') || !value('MAIL_FROM')) {
+      warning(value('RESEND_API_KEY') ? 'MAIL_FROM' : 'RESEND_API_KEY', 'fehlt — Nachrichten aus dem Hilfe-Fenster werden nur in `support_requests` gespeichert, niemand bekommt eine Mail')
+    }
   }
 
   if (targets.includes('worker')) {

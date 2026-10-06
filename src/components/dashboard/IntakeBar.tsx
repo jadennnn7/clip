@@ -11,6 +11,10 @@ import { EDITOR_ENABLED } from '@/lib/features'
 import { cn } from '@/lib/utils'
 import { DEFAULT_PROJECT_SETTINGS, type ProjectSettings } from '@/types/workspace'
 import { Button } from '@/components/ui/button'
+import { LinkPricingDialog } from '@/components/landing/LinkPricingDialog'
+import { clearPendingVideo, readPendingVideo, savePendingVideo, type PendingVideo } from '@/lib/pending-video'
+import { startCheckout } from '@/lib/stripe/start-checkout'
+import { useBillingUsage } from '@/stores/billing-usage-store'
 import { NEW_PROJECT_ANCHOR, NEW_PROJECT_EVENT } from '@/components/dashboard/new-project'
 
 /**
@@ -23,6 +27,8 @@ type Phase = 'idle' | 'working' | 'done'
 export function IntakeBar() {
   const router = useRouter()
   const [url, setUrl] = useState('')
+  const [pendingVideo, setPendingVideo] = useState<PendingVideo | null>(null)
+  const { usage, loading: usageLoading } = useBillingUsage()
   const [file, setFile] = useState<File | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [settings] = useState<ProjectSettings>({ ...DEFAULT_PROJECT_SETTINGS })
@@ -32,6 +38,18 @@ export function IntakeBar() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const urlInputRef = useRef<HTMLInputElement>(null)
   const rootRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    // Read after hydration; auth, confirmation and onboarding can all return here.
+    const frame = requestAnimationFrame(() => {
+      const pending = readPendingVideo()
+      if (!pending) return
+      setUrl(pending.url)
+      if (pending.tier !== 'free') setPendingVideo(pending)
+      else clearPendingVideo()
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [])
 
   useEffect(() => {
     const focusIntake = () => {
@@ -77,6 +95,7 @@ export function IntakeBar() {
     try {
       if (file) {
         const id = await importLocalVideo(file, settings)
+        clearPendingVideo()
         setPhase('done')
         toast.success('Video importiert', { description: 'Dein erster Clip ist zum manuellen Schnitt bereit.' })
         router.push(`/dashboard/projects/${id}`)
@@ -85,6 +104,7 @@ export function IntakeBar() {
         // dauerhaft unter dem Feld und wird mit dem Projekt protokolliert
         // (`rights_confirmed_at`). Danach geht es dorthin, wo die Clips entstehen.
         const { projectId, title, publishing } = await startLinkImport(value, settings)
+        clearPendingVideo()
         setPhase('done')
         toast.success('Clips werden erstellt', {
           description: publishing?.message ?? `„${title}" wird geladen, transkribiert und geschnitten. Den Veröffentlichungsstatus siehst du bei den Clips.`,
@@ -145,6 +165,29 @@ export function IntakeBar() {
       )}
       aria-busy={busy}
     >
+      {pendingVideo && !usageLoading && <LinkPricingDialog
+        key={pendingVideo.expiresAt}
+        open
+        onOpenChange={(open) => {
+          if (!open) { clearPendingVideo(); setPendingVideo(null) }
+        }}
+        url={pendingVideo.url}
+        initialTier={pendingVideo.tier}
+        initialInterval={pendingVideo.interval}
+        yearlyAvailable={usage?.yearlyAvailable ?? false}
+        authenticated
+        finalFocus={urlInputRef}
+        onChoose={async (tier, interval) => {
+          if (tier === 'free') { clearPendingVideo(); setPendingVideo(null); return null }
+          if (!savePendingVideo(pendingVideo.url, tier, interval)) return 'Dein Browser blockiert das Speichern des Videolinks. Erlaube Website-Daten und versuche es erneut.'
+          const message = await startCheckout({ kind: 'plan', tier, interval })
+          // Checkout now owns the plan confirmation. Keep only the video draft
+          // for the return from Stripe, so a successful purchase is not offered again.
+          if (message === null) savePendingVideo(pendingVideo.url, 'free', interval)
+          return message
+        }}
+      />}
+
       {/* Lichtkante, solange gestartet wird — liegt genau auf dem Glasrand. */}
       {busy && <span aria-hidden className="intake-sheen inset-0 rounded-[inherit]" />}
 

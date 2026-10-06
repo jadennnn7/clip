@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 const LEGAL_LINKS = [
   { href: '/impressum', label: 'Impressum' },
   { href: '/datenschutz', label: 'Datenschutz' },
+  { href: '/agb', label: 'Nutzungsbedingungen' },
   { href: '/konto-loeschen', label: 'Konto löschen' },
 ]
 

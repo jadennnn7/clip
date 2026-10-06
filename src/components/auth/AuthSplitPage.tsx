@@ -32,20 +32,39 @@ function BrandMark() {
 }
 
 /** Was die Adresse über den letzten Schritt verrät — abgemeldet, Link abgelaufen, Kanal-Rückweg. */
+/**
+ * Der Wechsel zwischen Anmelden und Registrieren behält das Ziel — wer von
+ * der Partnerseite kommt, landet nach der Registrierung dort und nicht im
+ * Dashboard.
+ */
+function switchHref(path: '/login' | '/signup', params: AuthSearchParams): string {
+  const target = typeof params.redirect === 'string' ? params.redirect : null
+  return target && target.startsWith('/') && !target.startsWith('//')
+    ? `${path}?redirect=${encodeURIComponent(target)}`
+    : path
+}
+
 function noticeFrom(params: AuthSearchParams): AuthNotice | null {
   const error = typeof params.error === 'string' ? params.error : null
   if (error === 'invalid_link') {
     return {
       tone: 'error',
       title: 'Link ungültig oder abgelaufen',
-      text: 'Melde dich mit deinem Passwort an oder fordere unten einen neuen Anmeldelink an. Es gilt immer nur der zuletzt gesendete Link.',
+      text: 'Melde dich mit deinem Passwort an. Hast du es vergessen, fordere über „Passwort vergessen?" einen neuen Link an — es gilt immer nur der zuletzt gesendete.',
+    }
+  }
+  if (error === 'oauth_cancelled') {
+    return {
+      tone: 'error',
+      title: 'Anmeldung mit Google abgebrochen',
+      text: 'Versuche es noch einmal oder melde dich mit E-Mail und Passwort an.',
     }
   }
   if (error === 'oauth_failed') {
     return {
       tone: 'error',
-      title: 'Anmeldung mit Google abgebrochen',
-      text: 'Versuche es noch einmal oder melde dich mit E-Mail und Passwort an.',
+      title: 'Anmeldung mit Google fehlgeschlagen',
+      text: 'Google hat die Anmeldung nicht bestätigt. Versuche es noch einmal oder melde dich mit E-Mail und Passwort an.',
     }
   }
   if (error === 'oauth_session_expired' || error === 'oauth_origin_mismatch' || error === 'connection_failed') {
@@ -171,7 +190,7 @@ export function AuthSplitPage({ intent, searchParams }: { intent: AuthIntent; se
         <p className="text-sm text-white/55">
           {isSignup ? 'Schon registriert?' : 'Noch kein Konto?'}{' '}
           <Link
-            href={isSignup ? '/login' : '/signup'}
+            href={switchHref(isSignup ? '/login' : '/signup', searchParams)}
             className="rounded-sm font-medium text-white underline decoration-white/30 underline-offset-4 outline-none transition-colors hover:decoration-white focus-visible:ring-2 focus-visible:ring-white/50"
           >
             {isSignup ? 'Anmelden' : 'Registrieren'}

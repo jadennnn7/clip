@@ -1,15 +1,17 @@
 import React from 'react'
+import { cookies } from 'next/headers'
 import { AppSidebar } from '@/components/dashboard/AppSidebar'
 import { TopBar } from '@/components/dashboard/TopBar'
 import { SupportWidget } from '@/components/support/SupportWidget'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { WorkspaceOwner } from '@/components/workspace/WorkspaceProvider'
 import { getAccount } from '@/lib/account'
+import { SIDEBAR_STATE_KEY, isSidebarCollapsed } from '@/lib/sidebar-state'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const account = await getAccount()
+  const [account, cookieStore] = await Promise.all([getAccount(), cookies()])
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultCollapsed={isSidebarCollapsed(cookieStore.get(SIDEBAR_STATE_KEY)?.value)}>
       <WorkspaceOwner userId={account?.id ?? null} />
       {/* Schwebendes Layout: Unten liegt nur Licht (`ambient`), darauf die
           Glasflächen — Sidebar und Kopfleiste. Der Inhalt ist keine eigene
@@ -31,7 +33,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </SidebarInset>
       </div>
       {/* Auf jeder Seite der App dieselbe Hilfe — ein Gespräch, das beim Seitenwechsel weiterläuft. */}
-      <SupportWidget firstName={account?.fullName?.split(/\s+/)[0]} />
+      <SupportWidget firstName={account?.fullName?.split(/\s+/)[0]} email={account?.email || null} />
 
     </SidebarProvider>
   )

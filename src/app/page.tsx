@@ -5,7 +5,6 @@ import {
   Briefcase,
   Check,
   GraduationCap,
-  Link2,
   Mic,
   MonitorPlay,
   Plus,
@@ -13,14 +12,14 @@ import {
 import { LandingNav } from '@/components/landing/LandingNav'
 import { LongformToShorts } from '@/components/landing/LongformToShorts'
 import { PricingSection } from '@/components/landing/PricingSection'
+import { LinkBar } from '@/components/landing/LinkBar'
 import { PointerLight } from '@/components/landing/PointerLight'
 import { NightSky } from '@/components/landing/NightSky'
-import { BrandMark } from '@/components/landing/BrandMark'
+import { ClipMeteors } from '@/components/landing/ClipMeteors'
 import { CaptionMark } from '@/components/landing/CaptionMark'
-import {
-  ChapterMarker,
-  type ChapterId,
-} from '@/components/landing/Chapters'
+import { ChapterMarker } from '@/components/landing/Chapters'
+import { AmbientLight, Section, SectionHeader, stagger } from '@/components/landing/Section'
+import { SiteFooter } from '@/components/landing/SiteFooter'
 import { ClipGallery } from '@/components/landing/ClipGallery'
 import { FeatureBento } from '@/components/landing/FeatureBento'
 import {
@@ -87,7 +86,7 @@ export default function LandingPage() {
         <ClosingCta />
       </main>
 
-      <SiteFooter />
+      <SiteFooter links={[...SECTION_LINKS, { href: '/partner', label: 'Partnerprogramm' }]} />
     </div>
   )
 }
@@ -103,12 +102,6 @@ export default function LandingPage() {
  * `animation-fill-mode: both`, der Startzustand gilt also schon vor dem Delay.
  */
 const enter = (delay: number) => ({ animationDelay: `${delay}ms` })
-
-/**
- * Staffelung der Scroll-Animationen (`.scroll-rise` & Co. in `globals.css`)
- * für Kacheln, die in derselben Reihe gleichzeitig ins Bild kommen.
- */
-const stagger = (index: number) => ({ '--i': index }) as React.CSSProperties
 
 /** Belege statt Behauptungen — jeder Punkt steht so auch weiter unten auf der Seite. */
 const HERO_PROOF = [
@@ -136,6 +129,13 @@ function Hero() {
           <NightSky className="absolute inset-0" />
           <div className="absolute inset-0 bg-black/40" />
         </div>
+
+        {/* Sternschnuppen: ein Video, das als Meteor in Clips zerbricht, die
+            zu einem Sternbild werden (siehe `ClipMeteors`). Eigene Ebene, weil
+            der Himmel darüber auf 40 % gedimmt ist — die Schnuppen sollen
+            heller sein als jeder Stern. Nur im ersten Bildschirm, nach unten
+            läuft sie wie der Himmel aus. */}
+        <ClipMeteors className="pointer-events-none absolute inset-x-0 top-0 h-svh opacity-85 [mask-image:linear-gradient(to_bottom,#000_60%,transparent_95%)]" />
 
         {/* Der Horizont (`.hero-sky`): der Rand eines riesigen dunklen
             Planeten als feine Linie in Logo-Blau, knapp unter der
@@ -201,6 +201,7 @@ function Hero() {
             </div>
 
             <LinkBar
+              yearlyAvailable={yearlyBillingAvailable()}
               className="rise-in mx-auto mt-9 max-w-xl"
               style={enter(240)}
             />
@@ -236,53 +237,6 @@ function Hero() {
         <PlatformStrip />
       </div>
     </section>
-  )
-}
-
-/**
- * Das Eingabefeld als Einstieg — oben im Hero und noch einmal am Ende.
- *
- * Die gesamte Leiste ist der Link. Vorher war das Feld eine tote Fläche: Man
- * klickt genau dorthin, wo man den Link einfügen würde, und nichts passierte.
- * Echtes Glas, auch wenn darunter wenig läuft — die
- * Unschärfe hat etwas zu zeigen.
- */
-function LinkBar({
-  className,
-  style,
-}: {
-  className?: string
-  style?: React.CSSProperties
-}) {
-  return (
-    <div
-      className={cn('w-full', className)}
-      style={style}
-    >
-      <Link
-        href="/dashboard"
-        className="glass glass-interactive group flex w-full items-center gap-3 rounded-full p-2 pl-5 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/60"
-      >
-        <span className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/35 to-transparent" />
-        <Link2 aria-hidden className="size-[1.125rem] shrink-0 text-brand/80" />
-        {/* Auf 375 px brach der lange Satz mitten im Wort ab
-            („Video-Link einfüg…") — die kurze Fassung sagt dasselbe,
-            der Zusatz kommt erst, wenn Platz dafür da ist. */}
-        <span className="min-w-0 flex-1 truncate text-sm text-white/55">
-          <span className="sm:hidden">Link einfügen</span>
-          <span className="hidden sm:inline">
-            Video-Link einfügen oder Datei hochladen
-          </span>
-        </span>
-        <span className="liquid liquid-brand transition-ui flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-white group-hover:brightness-[1.06] sm:px-5">
-          Gratis starten
-          <ArrowRight
-            aria-hidden
-            className="size-3.5 transition-transform duration-300 ease-(--ease-out-quint) group-hover:translate-x-0.5"
-          />
-        </span>
-      </Link>
-    </div>
   )
 }
 
@@ -734,147 +688,5 @@ function ClosingCta() {
         </div>
       </div>
     </Section>
-  )
-}
-
-/* ========================================================================== */
-
-function SiteFooter() {
-  return (
-    <footer className="px-4 pt-8 pb-10 sm:px-6">
-      <div className="mx-auto w-full max-w-6xl">
-        {/* Eine Lichtnaht statt einer Rahmenlinie — dasselbe Detail wie die
-            Oberkanten der Glasflächen. */}
-        <div
-          aria-hidden
-          className="h-px bg-gradient-to-r from-transparent via-white/15 to-transparent"
-        />
-
-        <div className="flex flex-col gap-8 pt-10 md:flex-row md:items-start md:justify-between">
-          <div className="max-w-xs">
-            <Link
-              href="/"
-              className="-ml-1 inline-flex rounded-full py-1 pr-2 pl-1 outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-            >
-              <BrandMark />
-            </Link>
-            <p className="mt-3 text-sm leading-relaxed text-white/55">
-              Du fügst einen Link ein. Ocuris bewertet jeden Moment und
-              veröffentlicht die besten Clips — vollautomatisch.
-            </p>
-          </div>
-
-          <nav aria-label="Fußzeile">
-            <ul className="flex flex-wrap gap-x-6 gap-y-3 text-sm">
-              {[...SECTION_LINKS, { href: '/login', label: 'Anmelden' }].map(
-                (link) => (
-                  <li key={link.href}>
-                    <Link
-                      href={link.href}
-                      className="rounded-sm text-white/60 outline-none transition-ui hover:text-white focus-visible:ring-2 focus-visible:ring-white/50"
-                    >
-                      {link.label}
-                    </Link>
-                  </li>
-                ),
-              )}
-            </ul>
-          </nav>
-        </div>
-
-        <div className="mt-10 flex flex-col gap-2 text-xs text-white/55 sm:flex-row sm:justify-between">
-          <p>Verarbeite nur Videos, an denen du die Rechte hältst.</p>
-          <p className="flex flex-wrap gap-x-4 gap-y-1">
-            <Link href="/impressum" className="rounded-sm underline-offset-4 outline-none hover:text-white hover:underline focus-visible:ring-2 focus-visible:ring-white/50">
-              Impressum
-            </Link>
-            <Link href="/datenschutz" className="rounded-sm underline-offset-4 outline-none hover:text-white hover:underline focus-visible:ring-2 focus-visible:ring-white/50">
-              Datenschutz
-            </Link>
-            <span>© {new Date().getFullYear()} Ocuris</span>
-          </p>
-        </div>
-      </div>
-    </footer>
-  )
-}
-
-/* ========================================================================== */
-
-/**
- * Ein Abschnitt der Seite — und ein Kapitel des Videos, das die Seite ist:
- * `data-chapter` ist der Anker, an dem der Scrubber in der Navbar das
- * Kapitel beginnen lässt. Keine Rahmenlinien und keine Farbbänder zwischen
- * den Abschnitten: Auf dem dunklen Grund trennt Abstand, und Licht gliedert.
- */
-function Section({
-  id,
-  children,
-}: {
-  id?: ChapterId
-  children: React.ReactNode
-}) {
-  return (
-    <section
-      id={id}
-      data-chapter={id}
-      className="relative scroll-mt-16 px-4 py-16 sm:px-6 sm:py-24"
-    >
-      <div className="mx-auto w-full max-w-6xl">{children}</div>
-    </section>
-  )
-}
-
-/**
- * Kopf jedes Abschnitts: Kapitelmarke, Überschrift, Lead. Überall gleich,
- * damit die lange Seite einen Takt hat — die Marke nimmt die aus dem Hero
- * wieder auf, jede mit der Zeit, zu der ihr Kapitel beginnt.
- */
-function SectionHeader({
-  chapter,
-  title,
-  lead,
-  className,
-}: {
-  chapter: ChapterId
-  title: string
-  lead?: string
-  className?: string
-}) {
-  return (
-    <header className={cn('max-w-2xl', className)}>
-      {/* Marke, Überschrift und Lead kommen nacheinander herein. */}
-      <ChapterMarker id={chapter} className="scroll-rise" />
-      <h2
-        className="scroll-rise mt-5 font-display text-4xl leading-[1.05] font-semibold tracking-[-0.035em] text-balance text-white sm:text-5xl"
-        style={stagger(0.5)}
-      >
-        {title}
-      </h2>
-      {lead ? (
-        <p
-          className="scroll-rise mt-5 max-w-xl text-base leading-relaxed text-pretty text-white/60 sm:text-[1.0625rem]"
-          style={stagger(1)}
-        >
-          {lead}
-        </p>
-      ) : null}
-    </header>
-  )
-}
-
-/**
- * Weiches Umgebungslicht hinter einem Abschnitt, leicht ins Logo-Blau
- * gezogen — so hallt der Hero über die ganze Seite nach.
- */
-function AmbientLight({ className }: { className?: string }) {
-  return (
-    <div
-      aria-hidden
-      className={cn(
-        'pointer-events-none absolute -z-10 rounded-full bg-[radial-gradient(closest-side,rgb(0_160_252/0.08),transparent)]',
-        className,
-      )}
-    />
   )
 }

@@ -4,6 +4,11 @@ import { readFileSync } from 'node:fs'
 import ts from 'typescript'
 
 const origin = 'https://app.example.test'
+const originModule = { exports: {} }
+new Function('module', 'exports', ts.transpileModule(
+  readFileSync(new URL('../src/lib/request-origin.ts', import.meta.url), 'utf8'),
+  { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } },
+).outputText)(originModule, originModule.exports)
 class PublishingApiError extends Error {
   constructor(status) { super('Authentication failed'); this.status = status }
 }
@@ -21,6 +26,7 @@ function setup({ authenticated = true, failAt, returnTo = 'connections' } = {}) 
     getAccountInfo: () => step('profile', {}),
   }
   const mocks = {
+    '@/lib/request-origin': originModule.exports,
     'next/server': { NextResponse: { redirect: (url) => {
       const response = new Response(null, { status: 307, headers: { Location: String(url) } })
       response.cookies = { set: (...args) => cookies.push(args) }
@@ -42,7 +48,8 @@ function setup({ authenticated = true, failAt, returnTo = 'connections' } = {}) 
       publishingAppOrigin: () => origin,
       getPublishingCapabilities: () => ({ tiktok: { configured: true } }),
     },
-    '@/services/publishing/accounts': { saveAccountConnection: () => step('save', {}) },
+    '@/services/publishing/accounts': { listAccounts: async () => [], saveAccountConnection: () => step('save', {}) },
+    '@/services/publishing/limits': { channelLimit: async () => 30 },
     '@/services/publishing/oauth-state': {
       createOAuthState: (...args) => { calls.push(['state', args[2]]); return { state: 'state', cookie: 'signed-state', codeChallenge: 'challenge' } },
       extractOAuthState: () => ({ valid: true, codeVerifier: 'verifier', returnTo }),
@@ -72,10 +79,10 @@ function setup({ authenticated = true, failAt, returnTo = 'connections' } = {}) 
   return { run, calls, cookies }
 }
 
-test('localhost connection moves to configured host before auth or provider calls', async () => {
+test('localhost connection reports host mismatch locally before auth or provider calls', async () => {
   const state = setup()
   const response = await state.run(false, 'localhost:3000')
-  assert.equal(response.headers.get('location'), `${origin}/dashboard/connections?error=oauth_origin_mismatch`)
+  assert.equal(response.headers.get('location'), 'http://localhost:3000/dashboard/connections?error=oauth_origin_mismatch')
   assert.deepEqual(state.calls, [])
   assert.deepEqual(state.cookies, [])
 })
@@ -126,7 +133,7 @@ test('onboarding start stores its return target in the signed state', async () =
 test('unknown return targets fall back to the connections page', async () => {
   const state = setup()
   const response = await state.run(false, 'localhost:3000', '?return=https%3A%2F%2Fevil.example')
-  assert.equal(response.headers.get('location'), `${origin}/dashboard/connections?error=oauth_origin_mismatch`)
+  assert.equal(response.headers.get('location'), 'http://localhost:3000/dashboard/connections?error=oauth_origin_mismatch')
 })
 
 test('onboarding callback returns to the onboarding, including failures', async () => {

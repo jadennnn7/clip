@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { BarChart3, CalendarDays, CreditCard, House, Library, Link2, Palette, UserRound } from 'lucide-react'
+import { BarChart3, CalendarDays, CreditCard, HandCoins, House, Library, Link2, Palette, UserRound } from 'lucide-react'
 
 /**
  * Die Ziele der App-Navigation — einmal definiert, dreimal genutzt: Sidebar,
@@ -27,6 +27,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: '/dashboard/calendar', label: 'Kalender', icon: CalendarDays, group: 'Veröffentlichen' },
   { href: '/dashboard/connections', label: 'Kanäle', icon: Link2, group: 'Veröffentlichen' },
   { href: '/dashboard/billing', label: 'Abo & Verbrauch', icon: CreditCard, group: 'Konto' },
+  { href: '/dashboard/partner', label: 'Partnerprogramm', icon: HandCoins, group: 'Konto' },
   { href: '/dashboard/account', label: 'Konto & Daten', icon: UserRound, group: 'Konto' },
 ]
 

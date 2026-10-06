@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { PlatformLogo } from '@/components/landing/PlatformLogo'
 import { PLATFORM_LABEL } from '@/lib/social-labels'
 import type { SocialPlatform } from '@/types/database'
@@ -26,21 +27,19 @@ interface FeedItem {
   status: Status
   /** Zeitpunkt oder Score, rechts neben dem Status. */
   detail: string
-  image: string
+  /** Standbild eines eigenen Clips in `public/gallery/` — keine Stockfotos. */
+  still: string
 }
 
-const thumb = (id: string) =>
-  `https://images.unsplash.com/photo-${id}?w=96&h=170&fit=crop&crop=faces,center&q=70&auto=format`
-
 const FEED: FeedItem[] = [
-  { title: 'Der wahre Grund, warum 90 % aufgeben', platform: 'tiktok', status: 'published', detail: 'gerade eben', image: thumb('1500648767791-00dcc994a43e') },
-  { title: 'Mein größter Fehler als Creator', platform: 'youtube', status: 'scheduled', detail: 'Di · 18:00', image: thumb('1494790108377-be9c29b29330') },
-  { title: 'So fängst du 2026 an', platform: 'instagram', status: 'review', detail: 'Score 79', image: thumb('1559523161-0fc0d8b38a7a') },
-  { title: 'Niemand sagt dir das', platform: 'youtube', status: 'ready', detail: 'Score 94', image: thumb('1507003211169-0a1dd7228f2d') },
-  { title: 'Zehn Sekunden, jeden Montag', platform: 'tiktok', status: 'scheduled', detail: 'Mi · 12:30', image: thumb('1517841905240-472988babdf9') },
-  { title: 'Das ändert alles', platform: 'instagram', status: 'published', detail: 'vor 2 Std.', image: thumb('1506794778202-cad84cf45f1d') },
-  { title: 'Du sprichst zu allen – deshalb hört keiner zu', platform: 'youtube', status: 'scheduled', detail: 'Do · 19:00', image: thumb('1544005313-94ddf0286df2') },
-  { title: '40.000 Euro – und ich würde es wieder tun', platform: 'tiktok', status: 'published', detail: 'gestern', image: thumb('1590602847861-f357a9332bbc') },
+  { title: 'Der wahre Grund, warum 90 % aufgeben', platform: 'tiktok', status: 'published', detail: 'gerade eben', still: 'podcast' },
+  { title: 'Mein größter Fehler als Creator', platform: 'youtube', status: 'scheduled', detail: 'Di · 18:00', still: 'still-talkshow' },
+  { title: 'So fängst du 2026 an', platform: 'instagram', status: 'review', detail: 'Score 79', still: 'fresh' },
+  { title: 'Niemand sagt dir das', platform: 'youtube', status: 'ready', detail: 'Score 94', still: 'streak' },
+  { title: 'Zehn Sekunden, jeden Montag', platform: 'tiktok', status: 'scheduled', detail: 'Mi · 12:30', still: 'family' },
+  { title: 'Das ändert alles', platform: 'instagram', status: 'published', detail: 'vor 2 Std.', still: 'tunnel' },
+  { title: 'Du sprichst zu allen – deshalb hört keiner zu', platform: 'youtube', status: 'scheduled', detail: 'Do · 19:00', still: 'delivery' },
+  { title: '40.000 Euro – und ich würde es wieder tun', platform: 'tiktok', status: 'published', detail: 'gestern', still: 'got-it' },
 ]
 
 const STATUS: Record<Status, { label: string; dot: string }> = {
@@ -85,8 +84,8 @@ function FeedRow({ item }: { item: FeedItem }) {
   return (
     <li className="glass-tile flex items-center gap-3.5 rounded-2xl p-2.5 pr-4">
       <span className="relative h-[3.75rem] w-[2.125rem] shrink-0 overflow-hidden rounded-lg bg-white/5 ring-1 ring-white/10">
-        {/* eslint-disable-next-line @next/next/no-img-element -- dekorativ, per URL zugeschnitten */}
-        <img src={item.image} alt="" loading="lazy" decoding="async" className="size-full object-cover" />
+        {/* Sofort laden: Die Spalte läuft per Transform, spät geladene Bilder ploppten sonst leer ins Bild. */}
+        <Image src={`/gallery/${item.still}.jpg`} alt="" fill sizes="34px" loading="eager" className="object-cover" />
       </span>
 
       <span className="min-w-0 flex-1">

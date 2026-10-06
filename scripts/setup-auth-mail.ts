@@ -45,6 +45,8 @@ function templates(logoUrl: string) {
     mailer_templates_magic_link_content: read('magic-link'),
     mailer_subjects_confirmation: 'Bestätige deine E-Mail für Ocuris',
     mailer_templates_confirmation_content: read('confirmation'),
+    mailer_subjects_recovery: 'Neues Passwort für Ocuris',
+    mailer_templates_recovery_content: read('recovery'),
   }
 }
 
@@ -209,8 +211,9 @@ async function main(): Promise<void> {
   if (origin) {
     desired.site_url = origin
     const allowed = String(current.uri_allow_list ?? '').split(',').map((entry) => entry.trim()).filter(Boolean)
-    const callback = `${origin}/auth/callback`
-    if (!allowed.includes(callback)) desired.uri_allow_list = [...allowed, callback].join(',')
+    // `/auth/reset`: Rückkehr aus der Mail „Passwort vergessen?".
+    const returns = [`${origin}/auth/callback`, `${origin}/auth/reset`].filter((url) => !allowed.includes(url))
+    if (returns.length) desired.uri_allow_list = [...allowed, ...returns].join(',')
   }
 
   const changes = Object.entries(desired).filter(([key, next]) => String(current[key] ?? '') !== String(next))

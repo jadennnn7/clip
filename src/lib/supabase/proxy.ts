@@ -1,11 +1,14 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { hasCompletedOnboarding, ONBOARDING_PATH, requiresOnboarding } from '@/lib/onboarding'
+import { claimReferral } from '@/lib/referral'
 
 const PUBLIC_ROUTES = [
-  '/', '/login', '/signup', '/auth', '/api/stripe/webhook', '/api/auth/login', '/api/auth/password', '/api/oauth',
+  '/', '/login', '/signup', '/auth', '/api/stripe/webhook', '/api/auth/mail', '/api/auth/password', '/api/oauth',
   // Editor-Demo der Landingpage und die Vorschaubilder für geteilte Links.
   '/demo', '/opengraph-image', '/twitter-image',
+  // Das Partnerprogramm wirbt um Partner, die noch kein Konto haben.
+  '/partner',
   // Rechtsseiten: müssen ohne Konto erreichbar sein, sobald es sie gibt.
   '/impressum', '/datenschutz', '/agb', '/widerruf',
   // Anleitung zur Datenlöschung — Meta verlangt sie als öffentliche URL.
@@ -83,6 +86,10 @@ export async function updateSession(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
+
+  // Über einen Partnerlink gekommen: das Konto dem Partner zuordnen. Vor den
+  // Weiterleitungen unten, die die Cookies dieser Antwort übernehmen.
+  if (user) await claimReferral(supabase, request, response)
 
   if (!user && !isPublicRoute(request.nextUrl.pathname)) {
     if (request.nextUrl.pathname.startsWith('/api/')) {

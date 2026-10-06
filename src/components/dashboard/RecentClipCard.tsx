@@ -63,6 +63,7 @@ export function RecentClipCard({
             outputFormat={outputFormat}
             captionSize={13}
             showScore={false}
+            showDuration={false}
             showCaption={false}
             sizes="156px"
           />

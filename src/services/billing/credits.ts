@@ -39,7 +39,8 @@ function billingClient(): SupabaseClient {
 /**
  * Admins (`ADMIN_EMAILS`, durch Komma getrennt) testen ohne Grenzen: Ihr
  * Guthaben wird weder geprüft noch belastet, Exporte sind unbegrenzt. Das
- * Wasserzeichen hängt dagegen nur am Abo — ohne Abo bekommen es auch sie.
+ * Wasserzeichen bekommen sie dagegen immer, auch mit Abo — so sehen sie
+ * Vorschau und Export so, wie Gratis-Nutzer sie bekommen.
  * Erkannt an der E-Mail aus Supabase Auth — die im Profil kann der Nutzer
  * selbst ändern.
  */
@@ -65,7 +66,7 @@ export interface CreditBalance {
   nextGrantAt: string | null
   /** Verbleibende Gratis-Exporte, null wenn Exporte nicht begrenzt sind. */
   trialExportsLeft: number | null
-  /** Clips tragen das Ocuris-Wasserzeichen: Gratis-Tarif ohne aktives Abo. */
+  /** Clips tragen das Ocuris-Wasserzeichen: ohne aktives Abo, bei Admins immer. */
   watermark: boolean
 }
 
@@ -101,8 +102,8 @@ export async function readCreditBalance(userId: string, db = billingClient()): P
     nextGrantAt: typeof row.next_grant_at === 'string' ? row.next_grant_at : null,
     trialExportsLeft: row.on_trial && !admin ? Math.max(0, TRIAL.exports - exportsUsed) : null,
     // Nachgekaufte Credits allein machen keinen Tarif — nur ein laufendes Abo.
-    // Auch Admins: Sie sollen beim Testen sehen, was Gratis-Nutzer bekommen.
-    watermark: monthlyCredits === 0,
+    // Admins immer: Sie sollen beim Testen sehen, was Gratis-Nutzer bekommen.
+    watermark: admin || monthlyCredits === 0,
   }
 }
 

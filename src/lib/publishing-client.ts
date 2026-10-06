@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { AutomationMode, SocialAccount, SocialPlatform } from '@/types/database'
 import type { PublishingJobSummary } from '@/types/publishing'
+import type { TikTokCreatorInfo } from '@/types/tiktok'
 
 export type { PublishingJobSummary } from '@/types/publishing'
 
@@ -10,6 +11,7 @@ export interface PlatformCapability {
   configured: boolean
   canAutoPublish: boolean
   notice: string | null
+  publicDirectPost?: boolean
 }
 
 export interface SocialAccountsResponse {
@@ -141,6 +143,10 @@ function usePublishingResource<T>(url: string | null, pollMs?: number) {
 
 export function useSocialAccounts() {
   return usePublishingResource<SocialAccountsResponse>('/api/social/accounts')
+}
+
+export function useTikTokCreator(accountId: string) {
+  return usePublishingResource<TikTokCreatorInfo>(`/api/social/tiktok/creator?account_id=${encodeURIComponent(accountId)}`)
 }
 
 /** Without an id: all recent jobs. `null`: nothing to load (no cloud run queued any). */

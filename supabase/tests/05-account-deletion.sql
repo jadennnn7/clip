@@ -44,6 +44,10 @@ begin
     insert into public.clip_token_charges (user_id, reference, tokens) values (owner, 'charge-' || owner, 1);
     insert into public.export_events (user_id, reference) values (owner, 'export-' || owner);
     insert into public.rate_limit_hits (user_id, bucket, window_start, hits) values (owner, 'pipeline', now(), 1);
+    insert into public.partner_commissions (user_id, reference, net_cents, rate, commission_cents, currency, paid_at, available_at)
+      values (owner, 'commission-' || owner, 100, 0.2, 20, 'eur', now(), now());
+    insert into public.partner_payouts (user_id, amount_cents, reference) values (owner, 20, 'payout-' || owner);
+    insert into public.support_requests (user_id, email, message) values (owner, 'mail@example.com', 'Hilfe');
   end loop;
 end $$;
 

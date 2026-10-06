@@ -11,7 +11,8 @@ export const OPERATOR = {
   /** Nur bei einer Firma, z. B. „Geschäftsführer: Max Mustermann“ — sonst `null`. */
   representative: null as string | null,
   /** Ladungsfähige Anschrift; ein Postfach genügt nicht. */
-  city: 'Fürth',
+  street: 'Salzstraße 11',
+  city: '90763 Fürth',
   country: 'Deutschland',
   email: 'info@ocuris.app',
   phone: '175445526',
@@ -22,7 +23,7 @@ export const OPERATOR = {
 }
 
 /** Stand der Datenschutzerklärung; bei jeder inhaltlichen Änderung anpassen. */
-export const PRIVACY_UPDATED = '4. Oktober 2026'
+export const PRIVACY_UPDATED = '6. Oktober 2026'
 
 /** Felder von `OPERATOR`, die noch Platzhalter sind. */
 export function legalPlaceholders(): string[] {

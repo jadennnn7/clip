@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { LegalPage } from '@/components/legal/LegalPage'
 import { OPERATOR, PRIVACY_UPDATED } from '@/lib/legal'
+import { PARTNER, REFERRAL_COOKIE } from '@/lib/partner'
 
 export const metadata: Metadata = {
   title: 'Datenschutzerklärung — Ocuris',
@@ -75,8 +76,12 @@ export default function PrivacyPage() {
           <h2 id="m3">Verantwortlicher</h2>
           <p className="mt-3">
             {OPERATOR.name}
-            <br />
-            {OPERATOR.street}
+            {OPERATOR.street ? (
+              <>
+                <br />
+                {OPERATOR.street}
+              </>
+            ) : null}
             <br />
             {OPERATOR.city}, {OPERATOR.country}
           </p>
@@ -490,6 +495,14 @@ export default function PrivacyPage() {
             Angaben der anfragenden Personen verarbeitet, soweit dies zur Beantwortung der Kontaktanfragen und etwaiger
             angefragter Maßnahmen erforderlich ist.
           </p>
+          <p className="mt-3">
+            <strong>Nachricht an das Team aus dem Hilfe-Fenster: </strong>Schreiben Sie uns über das Hilfe-Fenster in der
+            App, speichern wir Ihre Nachricht zusammen mit der E-Mail-Adresse Ihres Kontos, der Seite, auf der Sie waren,
+            und – wenn Sie das Häkchen gesetzt lassen – dem bisherigen Chatverlauf mit dem KI-Assistenten. Wir leiten die
+            Nachricht per E-Mail an unser Support-Postfach weiter; für den Versand nutzen wir den Dienst Resend (Resend,
+            Inc., USA). Die Anfrage löschen wir mit Ihrem Konto, spätestens wenn sie erledigt ist und keine
+            Aufbewahrungspflicht mehr besteht.
+          </p>
           <ul className="mt-3 space-y-1">
             <li><strong>Verarbeitete Datenarten:</strong> Kontaktdaten, Inhaltsdaten, Meta- und Kommunikationsdaten.</li>
             <li><strong>Betroffene Personen:</strong> Kommunikationspartner.</li>
@@ -545,6 +558,18 @@ export default function PrivacyPage() {
           </p>
           <ul className="mt-3 space-y-1">
             <li><strong>Rechtsgrundlagen:</strong> Einwilligung (Art. 6 Abs. 1 S. 1 lit. a) DSGVO); Berechtigte Interessen (Art. 6 Abs. 1 S. 1 lit. f) DSGVO).</li>
+          </ul>
+          <p className="mt-3">
+            <strong>Eigenes Partnerprogramm: </strong>Nutzer können Ocuris über einen persönlichen Link weiterempfehlen.
+            Rufen Sie unsere Website über einen solchen Link auf, speichern wir den Partnercode für {PARTNER.cookieDays}{' '}
+            Tage in einem Cookie („{REFERRAL_COOKIE}“). Legen Sie in dieser Zeit ein Konto an, ordnen wir es dem Partner
+            zu und löschen das Cookie. Der Partner erhält eine Provision auf Ihre Zahlungen; er sieht dabei nur Beträge
+            und Zahlungsdaten, nicht Ihren Namen, Ihre E-Mail-Adresse oder Ihre Inhalte. Die Zuordnung speichern wir,
+            solange Ihr Konto besteht, Provisionsbuchungen im Rahmen der gesetzlichen Aufbewahrungspflichten.
+          </p>
+          <ul className="mt-3 space-y-1">
+            <li><strong>Verarbeitete Datenarten:</strong> Partnercode, Zeitpunkt der Zuordnung, Zahlungsbeträge.</li>
+            <li><strong>Rechtsgrundlagen:</strong> Berechtigte Interessen (Art. 6 Abs. 1 S. 1 lit. f) DSGVO) an der Abrechnung der Provisionen.</li>
           </ul>
         </section>
 

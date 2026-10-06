@@ -96,7 +96,10 @@ export function getPublishingCapabilities(): PublishingCapabilities {
     tiktok: {
       configured: tiktok,
       canAutoPublish: false,
-      notice: !tiktok ? setup ?? 'Die TikTok-Verbindung ist noch nicht eingerichtet. Die TikTok-App-Zugangsdaten fehlen.' : 'Clips werden automatisch in deine TikTok-Inbox übertragen. Du prüfst und veröffentlichst sie anschließend in TikTok; unbeaufsichtigtes Direct Posting wird nicht angeboten.',
+      publicDirectPost: tiktok && process.env.TIKTOK_AUDIT_PASSED === 'true',
+      notice: !tiktok ? setup ?? 'Die TikTok-Verbindung ist noch nicht eingerichtet. Die TikTok-App-Zugangsdaten fehlen.' : process.env.TIKTOK_AUDIT_PASSED === 'true'
+        ? 'Veröffentliche direkt aus der Clip-Vorschau. Wähle die Sichtbarkeit und bestätige jeden Beitrag.'
+        : 'Direktes Veröffentlichen benötigt video.publish. Bis zum TikTok-App-Audit sind nur private Testposts möglich; öffentliche Direct Posts sind noch gesperrt.',
     },
   }
 }

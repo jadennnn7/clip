@@ -7,6 +7,7 @@ import { PanelLeft, type LucideIcon } from 'lucide-react'
 import { MotionConfig, motion } from 'motion/react'
 
 import { cn } from '@/lib/utils'
+import { SIDEBAR_STATE_KEY, isSidebarCollapsed } from '@/lib/sidebar-state'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
@@ -28,14 +29,14 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 
 const RAIL_WIDTH = '3.05rem'
 const PANEL_WIDTH = '15rem'
-const STORAGE_KEY = 'omegaclip-sidebar'
 const DESKTOP_QUERY = '(min-width: 48rem)'
 
 /* --- Gespeicherter Einklapp-Zustand ------------------------------------------
    Über `useSyncExternalStore` statt Effekt plus setState — siehe
    `use-stored-layout.ts`. Der Wert wird zusätzlich im Speicher gehalten: Ist
    localStorage blockiert, soll der Knopf trotzdem funktionieren, nur eben
-   ohne Erinnerung über den Reload hinaus. */
+   ohne Erinnerung über den Reload hinaus. Ein Cookie spiegelt ihn für den
+   Server (siehe `lib/sidebar-state.ts`). */
 
 const listeners = new Set<() => void>()
 let collapsedValue: boolean | null = null
@@ -43,22 +44,25 @@ let collapsedValue: boolean | null = null
 function readCollapsed(): boolean {
   if (collapsedValue !== null) return collapsedValue
   try {
-    const stored = window.localStorage.getItem(STORAGE_KEY)
-    // Ohne gespeicherten Wert: eingeklappt — mehr Platz für den Inhalt.
-    collapsedValue = stored === null ? true : stored === 'collapsed'
+    collapsedValue = isSidebarCollapsed(window.localStorage.getItem(SIDEBAR_STATE_KEY))
   } catch {
     collapsedValue = true
   }
   return collapsedValue
 }
 
+function writeCookie(collapsed: boolean) {
+  document.cookie = `${SIDEBAR_STATE_KEY}=${collapsed ? 'collapsed' : 'expanded'}; path=/; max-age=31536000; samesite=lax`
+}
+
 function writeCollapsed(next: boolean) {
   collapsedValue = next
   try {
-    window.localStorage.setItem(STORAGE_KEY, next ? 'collapsed' : 'expanded')
+    window.localStorage.setItem(SIDEBAR_STATE_KEY, next ? 'collapsed' : 'expanded')
   } catch {
     // Privater Modus oder blockierter Speicher — gilt dann nur bis zum Reload.
   }
+  writeCookie(next)
   listeners.forEach((listener) => listener())
 }
 
@@ -67,7 +71,7 @@ function subscribeCollapsed(listener: () => void) {
   // Ein zweiter Tab soll dieselbe Breite übernehmen, statt beim nächsten
   // Reload überraschend umzuspringen.
   const onStorage = (event: StorageEvent) => {
-    if (event.key !== STORAGE_KEY) return
+    if (event.key !== SIDEBAR_STATE_KEY) return
     collapsedValue = null
     listener()
   }
@@ -106,12 +110,19 @@ function useSidebar() {
   return context
 }
 
-function SidebarProvider({ children }: { children: React.ReactNode }) {
+function SidebarProvider({
+  children,
+  defaultCollapsed = true,
+}: {
+  children: React.ReactNode
+  /** Zustand aus dem Cookie — damit schon das Server-HTML die richtige Breite hat. */
+  defaultCollapsed?: boolean
+}) {
   const pathname = usePathname()
   const storedCollapsed = React.useSyncExternalStore(
     subscribeCollapsed,
     readCollapsed,
-    () => true,
+    () => defaultCollapsed,
   )
   const isDesktop = React.useSyncExternalStore(
     subscribeDesktop,
@@ -150,6 +161,14 @@ function SidebarProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [toggle])
 
+  // Wer den Zustand bisher nur in localStorage hatte, bekommt ihn einmal ins
+  // Cookie gespiegelt — ab dem nächsten Laden stimmt dann schon das Server-HTML.
+  React.useEffect(() => {
+    if (!document.cookie.split('; ').some((entry) => entry.startsWith(`${SIDEBAR_STATE_KEY}=`))) {
+      writeCookie(readCollapsed())
+    }
+  }, [])
+
   const value = React.useMemo(
     () => ({ collapsed, toggle, mobileOpen, setMobileOpen, animated }),
     [collapsed, toggle, mobileOpen, setMobileOpen, animated],
@@ -169,16 +188,20 @@ function Sidebar({ className, children, ...props }: React.ComponentProps<'nav'>)
 
   return (
     <>
-      {mobileOpen ? (
-        <div
-          aria-hidden
-          onClick={() => setMobileOpen(false)}
-          className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[3px] animate-in fade-in-0 md:hidden"
-        />
-      ) : null}
+      {/* Bleibt stehen und blendet nur aus — sonst verschwände der Schleier
+          beim Schließen schlagartig, während die Schublade noch hinausgleitet. */}
+      <div
+        aria-hidden
+        onClick={() => setMobileOpen(false)}
+        className={cn(
+          'fixed inset-0 z-40 bg-black/30 backdrop-blur-[3px] transition-opacity duration-300 ease-out-quint md:hidden',
+          mobileOpen ? 'opacity-100' : 'pointer-events-none opacity-0',
+        )}
+      />
       <nav
         data-slot="sidebar"
         data-collapsed={collapsed || undefined}
+        data-animated={animated || undefined}
         data-mobile-open={mobileOpen || undefined}
         style={{ '--sidebar-width': collapsed ? RAIL_WIDTH : PANEL_WIDTH } as React.CSSProperties}
         className={cn(
@@ -187,7 +210,7 @@ function Sidebar({ className, children, ...props }: React.ComponentProps<'nav'>)
           'fixed inset-y-2 left-2 z-50 w-72 max-w-[85vw] -translate-x-[calc(100%+1rem)]',
           'transition-transform duration-300 ease-out-quint data-mobile-open:translate-x-0',
           'md:relative md:inset-auto md:z-auto md:my-2 md:ml-2 md:w-(--sidebar-width) md:max-w-none md:translate-x-0',
-          animated ? 'md:transition-[width]' : 'md:transition-none',
+          animated ? 'md:transition-[width] md:duration-300 md:ease-out-quint' : 'md:transition-none',
           className,
         )}
         {...props}
@@ -207,34 +230,17 @@ function SidebarHeader({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="sidebar-header"
-      className={cn('flex shrink-0 flex-col gap-2 p-2 pt-3', className)}
+      className={cn('sidebar-in flex shrink-0 flex-col gap-2 p-2 pt-3', className)}
       {...props}
     />
   )
 }
 
-/**
- * Welche Zeile gerade überfahren wird — für die ganze Navigation, nicht je
- * Zeile. So wechselt die Hover-Linse beim Weiterfahren in einem Zug zur
- * nächsten Zeile und gleitet hinüber, statt erst zu verschwinden und neu
- * aufzutauchen. Erst wer die Navigation verlässt, löscht sie.
- */
-const SidebarHoverContext = React.createContext<{
-  hovered: string | null
-  setHovered: (href: string | null) => void
-} | null>(null)
-
 function SidebarBody({ className, children, ...props }: React.ComponentProps<'div'>) {
-  const [hovered, setHovered] = React.useState<string | null>(null)
-  const hover = React.useMemo(() => ({ hovered, setHovered }), [hovered])
   return (
     <div data-slot="sidebar-body" className={cn('min-h-0 flex-1', className)} {...props}>
       <ScrollArea className="h-full">
-        <SidebarHoverContext.Provider value={hover}>
-          <div className="flex flex-col gap-0.5 px-2 pb-2" onMouseLeave={() => setHovered(null)}>
-            {children}
-          </div>
-        </SidebarHoverContext.Provider>
+        <div className="flex flex-col gap-0.5 px-2 pb-2">{children}</div>
       </ScrollArea>
     </div>
   )
@@ -244,11 +250,24 @@ function SidebarFooter({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="sidebar-footer"
-      className={cn('flex shrink-0 flex-col gap-1 p-2', className)}
+      className={cn('sidebar-in flex shrink-0 flex-col gap-1 p-2', className)}
       {...props}
     />
   )
 }
+
+/**
+ * Ein- und Ausblenden der Beschriftungen beim Umschalten. Aufklappen: Erst
+ * wächst die Leiste, kurz danach blenden die Texte ein und rücken 4 px nach.
+ * Einklappen: Die Texte gehen sofort, bevor die Leiste schmal wird — sonst
+ * würden sie sichtbar abgeschnitten. Nur nach einer Nutzeraktion
+ * (`data-animated`), nicht beim Wiederherstellen nach dem Laden.
+ */
+const sidebarRevealClasses =
+  'group-data-animated/sidebar:transition-[opacity,translate] group-data-animated/sidebar:duration-200 ' +
+  'group-data-animated/sidebar:delay-75 group-data-animated/sidebar:ease-out-quint ' +
+  'group-data-collapsed/sidebar:pointer-events-none group-data-collapsed/sidebar:-translate-x-1 group-data-collapsed/sidebar:opacity-0 ' +
+  'group-data-animated/sidebar:group-data-collapsed/sidebar:delay-0 group-data-animated/sidebar:group-data-collapsed/sidebar:duration-100'
 
 /**
  * Gruppe mit Überschrift. Eingeklappt wird die Überschrift unsichtbar, behält
@@ -266,12 +285,12 @@ function SidebarGroup({
       role="group"
       aria-labelledby={id}
       data-slot="sidebar-group"
-      className={cn('flex flex-col gap-0.5 pt-4 first:pt-1', className)}
+      className={cn('sidebar-in flex flex-col gap-0.5 pt-4 first:pt-1', className)}
       {...props}
     >
       <p
         id={id}
-        className="flex h-6 items-center px-2 text-[11px] font-medium tracking-wide whitespace-nowrap text-sidebar-foreground/45 transition-opacity group-data-collapsed/sidebar:opacity-0"
+        className={cn('flex h-6 items-center px-2 text-[11px] font-medium tracking-wide whitespace-nowrap text-sidebar-foreground/45', sidebarRevealClasses)}
       >
         {label}
       </p>
@@ -282,11 +301,12 @@ function SidebarGroup({
 
 /**
  * Gemeinsame Grundform aller Zeilen — Verweise, Schalter, Menü-Auslöser.
- * Nav-Links ergänzen den Dock-Hover (gleitende Linse + federndes Icon) in
- * `SidebarLink`.
+ * Hover ist für alle Zeilen derselbe: eine neutrale, leicht hellere Fläche,
+ * ohne Bewegung und ohne Blau. Blau trägt nur die aktive Seite — sonst sehen
+ * „hier bin ich" und „hier ist der Zeiger" gleich aus.
  */
 const sidebarRowClasses =
-  'relative transition-colors duration-200 ease-out ' +
+  'transition-ui relative ' +
   'flex h-8 w-full shrink-0 items-center gap-2.5 rounded-[10px] px-2 text-[13px] ' +
   'text-sidebar-foreground/70 outline-none ' +
   'hover:bg-foreground/[0.05] hover:text-sidebar-foreground ' +
@@ -300,7 +320,6 @@ const sidebarRowActiveClasses = 'z-10 font-medium text-sidebar-foreground hover:
 
 /** Federt leicht nach — wie im Dock. */
 const LENS_SPRING = { type: 'spring', stiffness: 320, damping: 24 } as const
-const DOCK_SPRING = { type: 'spring', stiffness: 300, damping: 20 } as const
 
 function SidebarLens() {
   return (
@@ -318,11 +337,7 @@ function SidebarLabel({ className, ...props }: React.ComponentProps<'span'>) {
   return (
     <span
       data-slot="sidebar-label"
-      className={cn(
-        'flex min-w-0 flex-1 items-center gap-2 whitespace-nowrap transition-opacity',
-        'group-data-collapsed/sidebar:pointer-events-none group-data-collapsed/sidebar:opacity-0',
-        className,
-      )}
+      className={cn('flex min-w-0 flex-1 items-center gap-2 whitespace-nowrap', sidebarRevealClasses, className)}
       {...props}
     />
   )
@@ -363,16 +378,6 @@ function SidebarLink({
   /** Zähler rechts in der Zeile, etwa die Zahl der Projekte. */
   badge?: React.ReactNode
 }) {
-  const shared = React.useContext(SidebarHoverContext)
-  const [ownHover, setOwnHover] = React.useState(false)
-  const hovered = shared ? shared.hovered === href : ownHover
-  const setHovered = (next: boolean) => {
-    if (shared) {
-      if (next) shared.setHovered(href)
-      else if (shared.hovered === href) shared.setHovered(null)
-    } else setOwnHover(next)
-  }
-
   return (
     <SidebarTooltip label={label}>
       <Link
@@ -380,52 +385,24 @@ function SidebarLink({
         data-slot="sidebar-link"
         data-active={active || undefined}
         aria-current={active ? 'page' : undefined}
-        onMouseEnter={() => setHovered(true)}
-        // Mit gemeinsamem Zustand löscht erst das Verlassen der Navigation.
-        onMouseLeave={shared ? undefined : () => setHovered(false)}
-        onFocus={() => setHovered(true)}
-        onBlur={() => setHovered(false)}
-        // Den Hover-Grund liefert die Linse, nicht die Zeile selbst.
-        className={cn(sidebarRowClasses, 'relative isolate hover:bg-transparent', active && sidebarRowActiveClasses, className)}
+        className={cn(sidebarRowClasses, 'group/link isolate', active && sidebarRowActiveClasses, className)}
         {...props}
       >
         {active ? <SidebarLens /> : null}
 
-        {/* Dock-Hover, Teil 1: eine Linse über die ganze Zeile. Sie gleitet
-            per `layoutId` federnd von Zeile zu Zeile — und füllt genau die
-            Zeile, steht also nirgends über. Auf der aktiven Zeile liegt
-            schon deren Linse, dort bleibt sie weg. */}
-        {hovered && !active ? (
-          <motion.span
-            layoutId="sidebar-hover-lens"
-            aria-hidden
-            transition={DOCK_SPRING}
-            className="pointer-events-none absolute inset-0 rounded-[inherit] bg-foreground/[0.055] shadow-[inset_0_1px_0_rgb(255_255_255/0.05)] ring-1 ring-sidebar-primary/15 dark:ring-sidebar-primary/20"
-          />
-        ) : null}
-
-        {/* Teil 2: Das Icon federt hoch und nimmt das Blau an. */}
-        <motion.span
-          className="relative z-[1] flex size-4 shrink-0 items-center justify-center"
-          animate={{
-            scale: hovered ? 1.15 : 1,
-            rotate: hovered ? -5 : 0,
-          }}
-          transition={DOCK_SPRING}
-        >
-          <Icon
-            className={cn(
-              'size-4 transition-colors duration-200',
-              active || hovered ? 'text-sidebar-primary' : 'text-sidebar-foreground/55',
-            )}
-            strokeWidth={1.75}
-          />
-        </motion.span>
+        <Icon
+          className={cn(
+            'transition-ui relative z-[1]',
+            active ? 'text-sidebar-primary' : 'text-sidebar-foreground/55 group-hover/link:text-sidebar-foreground/90',
+          )}
+          strokeWidth={1.75}
+        />
 
         <SidebarLabel className="relative z-[1]">
           <span className="truncate">{label}</span>
           {badge !== undefined && badge !== null ? (
-            <span className="ml-auto rounded-full bg-sidebar-primary/10 px-1.5 text-[11px] font-medium text-sidebar-primary tabular-nums">
+            // Kommt erst nach dem Laden des Workspace — blendet ein, statt aufzuploppen.
+            <span className="ml-auto animate-in rounded-full bg-sidebar-primary/10 px-1.5 text-[11px] font-medium text-sidebar-primary tabular-nums duration-300 fade-in-0">
               {badge}
             </span>
           ) : null}

@@ -14,6 +14,8 @@ import type { PublishingJob } from '@/types/publishing'
 import { getPublishingAccount } from './accounts'
 import { getPublishingCapabilities } from './config'
 import { publishingReviewReason } from './policy'
+import { tiktokPostSchema } from '@/lib/tiktok-post'
+import { clipOutputDuration } from '@/lib/clip-export'
 
 class LostClaim extends Error {}
 
@@ -42,6 +44,16 @@ export async function processPublishingJob(jobId: string, signal?: AbortSignal):
     // Validate ownership, account state, and tokens before spending render time.
     const initial = await getPublishingAccount(job.user_id, job.account_id)
     if (initial.account.status !== 'active') throw new PublishError('Bitte verbinde diesen Kanal erneut.', 'auth')
+    let tiktokPost
+    if (initial.account.platform === 'tiktok' && job.checkpoint.tiktok_post_info) {
+      try { tiktokPost = tiktokPostSchema.parse(JSON.parse(job.checkpoint.tiktok_post_info)) }
+      catch { throw new PublishError('Die TikTok-Freigabe ist ungültig. Öffne den Clip und wähle Sichtbarkeit und Veröffentlichungsoptionen erneut.', 'terminal') }
+    }
+    if (initial.account.platform === 'tiktok' && !tiktokPost && !job.checkpoint.tiktok_publish_id && !job.checkpoint.tiktok_publish_id_pending) {
+      await finish({ status: 'needs_review', review_required: true, attempt_count: 0, next_retry_at: null,
+        last_error: 'Öffne diesen Clip und wähle die Sichtbarkeit für die direkte TikTok-Veröffentlichung.' })
+      return
+    }
     // Freigabe-Clips bleiben unangetastet, bis jemand auf „Veröffentlichen"
     // klickt — kein Render, kein Upload. Die Freigabe setzt `review_required`
     // zurück, erst dann läuft dieser Auftrag weiter.
@@ -66,7 +78,7 @@ export async function processPublishingJob(jobId: string, signal?: AbortSignal):
         inputProps: buildCompositionProps({
           clip: job.clip, removedWords: [], videoSrc: await getDownloadUrl(job.proxy_key, 6 * 3600),
           sourceWidth: job.source_width, sourceHeight: job.source_height,
-          watermark: await needsWatermark(job.user_id),
+          watermark: tiktokPost ? false : await needsWatermark(job.user_id),
         }),
         outputFormat: job.output_format, outputPath: output, signal,
       })
@@ -94,6 +106,7 @@ export async function processPublishingJob(jobId: string, signal?: AbortSignal):
     const result = await provider.publish({
       account: credentials, videoUrl, title: job.clip.title,
       description: job.clip.description, hashtags: job.clip.hashtags,
+      tiktokPost, videoDurationSeconds: clipOutputDuration(job.clip),
       idempotencyKey: job.id, checkpoint: job.checkpoint,
       saveCheckpoint: (checkpoint) => save({ checkpoint: { ...job.checkpoint, ...checkpoint } }),
     })

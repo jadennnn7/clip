@@ -58,9 +58,15 @@ const LINK_CLASSES =
  */
 export function LandingNav({
   links,
+  cta = { href: '/dashboard', label: 'Loslegen' },
+  chapters = true,
 }: {
   /** In Seitenreihenfolge — wer die Leiste liest, liest das Inhaltsverzeichnis. */
   links: ReadonlyArray<{ href: string; label: string }>
+  /** Der blaue Knopf rechts außen für Besucher ohne Konto. */
+  cta?: { href: string; label: string }
+  /** Kapitel-Timeline am oberen Rand — nur die Landingpage ist das lange Video. */
+  chapters?: boolean
 }) {
   const scrolled = useSyncExternalStore(
     subscribe,
@@ -102,10 +108,10 @@ export function LandingNav({
 
             {/* Derselbe blaue Tropfen wie „Gratis starten" im Hero. */}
             <Link
-              href="/dashboard"
+              href={cta.href}
               className="liquid liquid-brand group flex h-10 shrink-0 items-center gap-1.5 rounded-full pr-3.5 pl-4 text-[0.8125rem] font-semibold whitespace-nowrap outline-none transition-ui hover:brightness-[1.06] focus-visible:ring-2 focus-visible:ring-white/60"
             >
-              Loslegen
+              {cta.label}
               <ArrowRight
                 aria-hidden
                 className="size-3.5 transition-transform duration-300 ease-(--ease-out-quint) group-hover:translate-x-0.5"
@@ -133,7 +139,7 @@ export function LandingNav({
       {/* Lesefortschritt als Video-Timeline an der Oberkante des Fensters:
           Die Seite ist das lange Video aus dem Hero, ihre Abschnitte sind
           die Kapitel. Nach der Pille im DOM, damit die Zeitanzeige über ihr liegt. */}
-      <ChapterScrubber visible={scrolled} />
+      {chapters ? <ChapterScrubber visible={scrolled} /> : null}
     </header>
   )
 }

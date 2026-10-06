@@ -22,8 +22,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       throw new PublishingApiError(409, 'Diese Aktion ist im aktuellen Status nicht möglich. Bitte aktualisiere die Warteschlange.')
     }
     if (action !== 'cancel') {
-      const { data: account } = await db.from('social_accounts').select('status').eq('id', job.account_id).eq('user_id', user.id).maybeSingle()
+      const { data: account } = await db.from('social_accounts').select('status,platform').eq('id', job.account_id).eq('user_id', user.id).maybeSingle()
       if (account?.status !== 'active') throw new PublishingApiError(409, 'Bitte verbinde den Kanal zuerst erneut.')
+      if (account.platform === 'tiktok' && !job.checkpoint.tiktok_post_info && !job.checkpoint.tiktok_publish_id) {
+        throw new PublishingApiError(409, 'Öffne den Clip und wähle Sichtbarkeit und Optionen für die direkte TikTok-Veröffentlichung.')
+      }
     }
     const now = new Date().toISOString()
     const patch = action === 'cancel' ? { status: 'cancelled' } : {

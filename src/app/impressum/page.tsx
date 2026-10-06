@@ -17,8 +17,12 @@ export default function ImprintPage() {
       <LegalSection title="Angaben gemäß § 5 DDG">
         <p>
           {OPERATOR.name}
-          <br />
-          {OPERATOR.street}
+          {OPERATOR.street ? (
+            <>
+              <br />
+              {OPERATOR.street}
+            </>
+          ) : null}
           <br />
           {OPERATOR.city}
           <br />
@@ -46,7 +50,7 @@ export default function ImprintPage() {
         <p>
           {OPERATOR.name}
           <br />
-          {OPERATOR.street}, {OPERATOR.city}
+          {OPERATOR.street ? `${OPERATOR.street}, ` : ''}{OPERATOR.city}
         </p>
       </LegalSection>
 

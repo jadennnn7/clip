@@ -28,7 +28,9 @@ export function PageHeader({ title, description, action, className }: PageHeader
           </p>
         ) : null}
       </div>
-      {action ? <div className="shrink-0">{action}</div> : null}
+      {/* `max-w-full`: Eine Werkzeugleiste als Aktion bricht auf schmalen
+          Bildschirmen in sich um, statt über den Rand zu ragen. */}
+      {action ? <div className="max-w-full shrink-0">{action}</div> : null}
     </div>
   )
 }

@@ -258,8 +258,9 @@ export function TopBar() {
           onClick={() => { setTopUpOpen(true); void refreshBillingUsage() }}
           className="group relative flex h-8 items-center gap-2 rounded-full pl-2 pr-3 outline-none transition-all duration-150 hover:bg-white/[0.08] active:scale-95 focus-visible:ring-2 focus-visible:ring-ring/50 aria-expanded:bg-white/[0.08]"
         >
-          {/* Credit-Symbol mit weichem Glow in seinem eigenen Blau */}
-          <div className="relative flex size-5 shrink-0 items-center justify-center">
+          {/* Credit-Symbol mit weichem Glow in seinem eigenen Blau. Gedimmt,
+              solange noch keine Zahl daneben steht. */}
+          <div className={cn('relative flex size-5 shrink-0 items-center justify-center transition-opacity duration-300', remaining === null && 'opacity-50')}>
             <div
               aria-hidden
               className="absolute inset-0 rounded-full bg-brand-deep/60 opacity-40 blur-[6px] transition-opacity duration-300 group-hover:opacity-90 dark:bg-brand/70"
@@ -273,7 +274,14 @@ export function TopBar() {
             />
           </div>
           <span className="text-[13px] font-semibold tabular-nums tracking-tight text-foreground/90 transition-colors group-hover:text-foreground">
-            {remaining !== null ? formatCredits(remaining) : creditsLoading ? <Loader className="size-3.5 animate-spin" /> : '–'}
+            {remaining !== null ? (
+              // Blendet einmal ein; spätere Aktualisierungen tauschen nur die Ziffern.
+              <span className="animate-in duration-300 fade-in-0">{formatCredits(remaining)}</span>
+            ) : creditsLoading ? (
+              // Platzhalter in Zahlenbreite statt Spinner — derselbe Lichtstreif
+              // wie bei Clips, die gleich entstehen.
+              <span aria-hidden className="shimmer block h-2.5 w-9 rounded-full bg-foreground/[0.12]" />
+            ) : '–'}
           </span>
         </button>
       </div>

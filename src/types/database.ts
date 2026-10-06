@@ -71,6 +71,11 @@ export interface Profile {
   render_minutes_used: number
   render_minutes_reset_at: string
   max_social_accounts: number
+  /** Eigener Code für den Partnerlink; entsteht beim ersten Besuch der Partnerseite. */
+  partner_code: string | null
+  /** Der Partner, über dessen Link dieses Konto kam. */
+  referred_by: string | null
+  referred_at: string | null
   created_at: string
   updated_at: string
 }

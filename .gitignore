@@ -49,3 +49,7 @@ next-env.d.ts
 
 # Supabase CLI: lokaler Cache
 /supabase/.temp/
+
+# Temporäre Daten und lokale Skript-Ausgaben
+/tmp/
+/output/

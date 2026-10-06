@@ -108,6 +108,7 @@ export async function getPublishingAccount(userId: string, accountId: string): P
   if (tokenError || !stored) throw new PublishError('Die Verbindung muss erneut autorisiert werden.', 'auth')
   const context = aad(userId, account.platform, account.platform_account_id)
   let accessToken = decrypt(stored.access_token, context)
+  let scopes = stored.scopes
   const expiresAt = stored.token_expires_at ? Date.parse(stored.token_expires_at) : Infinity
   if (expiresAt < Date.now() + 120_000) {
     if ((stored.refresh_expires_at && Date.parse(stored.refresh_expires_at) <= Date.now()) || !stored.refresh_token) {
@@ -122,6 +123,7 @@ export async function getPublishingAccount(userId: string, accountId: string): P
       const refreshed = await getProvider(account.platform).refreshToken(decrypt(stored.refresh_token, context))
       await saveRefreshedTokens(userId, account, refreshed, stored)
       accessToken = refreshed.accessToken
+      if (refreshed.scopes.length) scopes = refreshed.scopes
     } catch (refreshError) {
       await db.rpc('release_social_token_refresh', { p_user_id: userId, p_account_id: accountId, p_expected_access_token: stored.access_token })
       if (refreshError instanceof PublishError && refreshError.kind === 'auth') {
@@ -130,7 +132,7 @@ export async function getPublishingAccount(userId: string, accountId: string): P
       throw refreshError
     }
   }
-  return { account, credentials: { accessToken, platformAccountId: account.platform_account_id, metaIgUserId: account.meta_ig_user_id } }
+  return { account, credentials: { accessToken, scopes, platformAccountId: account.platform_account_id, metaIgUserId: account.meta_ig_user_id } }
 }
 
 async function saveRefreshedTokens(userId: string, account: SocialAccount, tokens: TokenSet, previous: StoredTokens): Promise<void> {

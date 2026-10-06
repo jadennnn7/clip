@@ -8,7 +8,7 @@ import ts from 'typescript'
 // No environment files, database, network, render process or real post is used.
 const requireBuiltin = createRequire(import.meta.url)
 function load(relative, dependencies = {}) {
-  const module = { exports: {} }
+  const loaded = { exports: {} }
   const compiled = ts.transpileModule(readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true },
   }).outputText
@@ -17,10 +17,13 @@ function load(relative, dependencies = {}) {
     if (name === 'server-only') return {}
     if (name.startsWith('node:')) return requireBuiltin(name)
     throw new Error(`Unexpected import: ${name}`)
-  }, module, module.exports)
-  return module.exports
+  }, loaded, loaded.exports)
+  return loaded.exports
 }
 const policy = load('src/services/publishing/policy.ts')
+const clipExport = load('src/lib/clip-export.ts')
+const tiktokPost = load('src/lib/tiktok-post.ts', { zod: requireBuiltin('zod') })
+const { PublishError } = load('src/services/social/base.ts')
 const { buildPublishingPlan } = load('src/services/publishing/plan.ts')
 const account = (overrides = {}) => ({ id: 'account-1', user_id: 'user-1', platform: 'youtube', platform_username: 'creator', status: 'active', automation_mode: 'auto_publish', auto_publish_min_score: 80, ...overrides })
 const capability = (overrides = {}) => ({ configured: true, canAutoPublish: true, notice: null, ...overrides })
@@ -87,15 +90,17 @@ function queueHarness(accounts = [account()], caps = capabilities()) {
       return query
     },
   }
-  const module = load('src/services/publishing/jobs.ts', {
+  const implementation = load('src/services/publishing/jobs.ts', {
     '@trigger.dev/sdk': { tasks: { trigger() { throw new Error('No due jobs in this test') } } },
     '@/lib/supabase/admin': { createAdminClient: () => db },
+    '@/lib/pipeline-clip-id': { pipelineClipId: async (userId, sourceId, index) => `clip-${index}` },
     '@/lib/pipeline-clips': { segmentToClip: (segment, projectId, now, result, id, userId) => clip({ ...segment, project_id: projectId, id, user_id: userId, analysis_source: result.analysis }) },
     './accounts': { listAccounts: async () => accounts },
+    './limits': { channelLimit: async () => 30, accountsWithinLimit: (values) => values },
     './config': { getPublishingCapabilities: () => caps },
     './policy': policy,
   })
-  return { ...module, rows, dueFilters }
+  return { ...implementation, rows, dueFilters }
 }
 const enqueueInput = () => ({ targets: { userId: 'user-1', accountIds: ['account-1'] }, sourceJobId: 'run_test', result: { analysis: 'ai', width: 1920, height: 1080, segments: [clip({ virality_score: 65 }), clip({ virality_score: 95 })] }, proxyKey: 'test/proxy.mp4', outputFormat: '9:16' })
 
@@ -134,9 +139,11 @@ test('account setup changes while generating clips produce an explicit skipped-p
   assert.equal(harness.rows.size, 0)
 })
 
-function workerHarness({ review = false, renderKey = null, providerManual = false, checkpoint = {}, currentAccount = account(), secondAccount = currentAccount, caps = capabilities() } = {}) {
+function workerHarness({ review = false, renderKey = null, providerManual = false, checkpoint = {}, currentAccount = account(), secondAccount = currentAccount, caps = capabilities(), watermarkRequired = false } = {}) {
   const stored = { id: 'job-1', user_id: 'user-1', account_id: 'account-1', clip: clip(), proxy_key: 'proxy.mp4', source_width: 1920, source_height: 1080, output_format: '9:16', review_required: review, render_key: renderKey, checkpoint, attempt_count: 1, last_error: 'Old transient error', status: 'rendering' }
   const events = []
+  const providerInputs = []
+  const renderInputs = []
   let accountReads = 0
   const db = {
     async rpc(name) { assert.equal(name, 'claim_publishing_job'); return { data: { ...stored }, error: null } },
@@ -149,21 +156,23 @@ function workerHarness({ review = false, renderKey = null, providerManual = fals
       }
     },
   }
-  class PublishError extends Error {}
-  const module = load('src/services/publishing/worker.ts', {
+  const implementation = load('src/services/publishing/worker.ts', {
     'node:fs/promises': { mkdtemp: async () => '/fake/render', rm: async () => {} },
     '@/lib/supabase/admin': { createAdminClient: () => db },
+    '@/lib/tiktok-post': tiktokPost,
+    '@/lib/clip-export': clipExport,
+    '@/services/billing/credits': { consumeExport: async () => {}, needsWatermark: async () => watermarkRequired },
     '@/lib/storage/r2': { getDownloadUrl: async (key) => `https://storage.test/${key}`, getPublicUrl: (key) => `https://storage.test/${key}`, uploadFile: async () => { events.push('uploaded-render') } },
     '@/lib/composition-props': { buildCompositionProps: (input) => input },
-    '@/services/render/remotion': { getServeUrl: async () => '/fake/bundle', renderClipVideo: async () => { events.push('rendered') } },
+    '@/services/render/remotion': { getServeUrl: async () => '/fake/bundle', renderClipVideo: async (input) => { renderInputs.push(input); events.push('rendered') } },
     '@/services/social': { PublishError, backoffMs: () => 1000, MAX_PUBLISH_ATTEMPTS: 5,
-      getProvider: () => ({ getPublishingLimit: async () => ({ remaining: 10 }), publish: async () => { events.push('provider-publish'); return { platformPostId: 'remote-1', platformPostUrl: 'https://provider.test/post', requiresManualStep: providerManual, manualStepReason: providerManual ? 'Bei der Plattform bestätigen.' : undefined } } }),
+      getProvider: () => ({ getPublishingLimit: async () => ({ remaining: 10 }), publish: async (input) => { providerInputs.push(input); events.push('provider-publish'); return { platformPostId: 'remote-1', platformPostUrl: 'https://provider.test/post', requiresManualStep: providerManual, manualStepReason: providerManual ? 'Bei der Plattform bestätigen.' : undefined } } }),
     },
     './accounts': { getPublishingAccount: async () => ({ account: accountReads++ === 0 ? currentAccount : secondAccount, credentials: {} }) },
     './config': { getPublishingCapabilities: () => caps },
     './policy': policy,
   })
-  return { ...module, stored, events }
+  return { ...implementation, stored, events, providerInputs, renderInputs }
 }
 
 test('automatic queue job renders and publishes without an approval click', async () => {
@@ -202,4 +211,45 @@ test('revoked automatic consent during rendering stops public posting, and provi
   await manual.processPublishingJob('job-1')
   assert.equal(manual.stored.status, 'action_required')
   assert.equal(manual.stored.last_error, 'Bei der Plattform bestätigen.')
+})
+
+const tiktokOptions = { privacyLevel: 'SELF_ONLY', allowComment: false, allowDuet: false, allowStitch: false, commercialContent: false, ownBrand: false, brandedContent: false, isAigc: false, consent: true }
+
+test('new TikTok jobs cannot silently fall back to the Inbox when post options are absent', async () => {
+  for (const checkpoint of [{}, { approved_at: '2026-10-05T00:00:00Z' }]) {
+    const h = workerHarness({ currentAccount: account({ platform: 'tiktok' }), checkpoint })
+    await h.processPublishingJob('job-1')
+    assert.equal(h.stored.status, 'needs_review')
+    assert.match(h.stored.last_error, /Sichtbarkeit.*direkte TikTok/)
+    assert.deepEqual(h.renderInputs, [])
+    assert.deepEqual(h.providerInputs, [])
+  }
+})
+
+test('Direct Post preserves per-post consent and settings and does not add an application watermark', async () => {
+  const h = workerHarness({ currentAccount: account({ platform: 'tiktok' }), watermarkRequired: true,
+    checkpoint: { approved_at: '2026-10-05T00:00:00Z', tiktok_post_info: JSON.stringify(tiktokOptions) } })
+  await h.processPublishingJob('job-1')
+  assert.equal(h.stored.status, 'published')
+  assert.deepEqual(h.providerInputs[0].tiktokPost, tiktokOptions)
+  assert.equal(h.providerInputs[0].videoDurationSeconds, 30)
+  assert.equal(h.renderInputs[0].inputProps.watermark, false)
+})
+
+test('malformed persisted TikTok consent fails before rendering or sending a post', async () => {
+  const h = workerHarness({ currentAccount: account({ platform: 'tiktok' }),
+    checkpoint: { approved_at: '2026-10-05T00:00:00Z', tiktok_post_info: JSON.stringify({ ...tiktokOptions, consent: false }) } })
+  await h.processPublishingJob('job-1')
+  assert.equal(h.stored.status, 'failed')
+  assert.deepEqual(h.renderInputs, [])
+  assert.deepEqual(h.providerInputs, [])
+})
+
+test('existing Inbox uploads retain their remote ID and continue reconciliation', async () => {
+  const h = workerHarness({ currentAccount: account({ platform: 'tiktok' }), renderKey: 'existing.mp4', providerManual: true,
+    checkpoint: { approved_at: '2026-10-05T00:00:00Z', tiktok_publish_id: 'inbox-1' } })
+  await h.processPublishingJob('job-1')
+  assert.equal(h.stored.status, 'action_required')
+  assert.equal(h.providerInputs[0].tiktokPost, undefined)
+  assert.equal(h.providerInputs[0].checkpoint.tiktok_publish_id, 'inbox-1')
 })

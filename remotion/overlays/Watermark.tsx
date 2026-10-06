@@ -4,9 +4,9 @@ import { WATERMARK_LOGO } from './watermark-logo'
 
 /**
  * Wasserzeichen im Gratis-Tarif: Ocuris-Zeichen und „Made with Ocuris" oben
- * rechts. Am Ende folgt der Abspann (`Outro.tsx`).
+ * links. Am Ende folgt der Abspann (`Outro.tsx`).
  *
- * Oben rechts, knapp unter der Kopfzeile der Apps (die strengste endet bei
+ * Oben links, knapp unter der Kopfzeile der Apps (die strengste endet bei
  * 9 % der Höhe): Dort liegen weder die Aktionsleiste rechts (ab 43 %) noch
  * Name und Beschreibung unten, und Hook-Titel und Untertitel stehen mittig.
  * Eine dunkle, leicht durchscheinende Pille mit Haarlinie hält es auf jedem
@@ -23,7 +23,7 @@ export const Watermark: React.FC = () => {
         style={{
           position: 'absolute',
           top: height * 0.095,
-          right: 36 * unit,
+          left: 36 * unit,
           display: 'flex',
           alignItems: 'center',
           gap: 12 * unit,
@@ -33,7 +33,7 @@ export const Watermark: React.FC = () => {
           border: `${1.5 * unit}px solid rgba(255, 255, 255, 0.14)`,
         }}
       >
-        <Img src={WATERMARK_LOGO} style={{ height: 50 * unit, width: 'auto' }} />
+        <Img src={WATERMARK_LOGO} style={{ height: 40 * unit, width: 'auto' }} />
         <span
           style={{
             display: 'flex',

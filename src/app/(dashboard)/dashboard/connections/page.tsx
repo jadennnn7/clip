@@ -1,12 +1,14 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { ArrowRight, ArrowUpRight, CalendarClock, Info, RefreshCw } from 'lucide-react'
+import { ArrowRight, CalendarClock, Plus, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import type { SocialPlatform } from '@/types/database'
 import { AccountCard } from '@/components/social/AccountCard'
-import { AutomationFlow, type AutomationState } from '@/components/social/AutomationFlow'
 import { PlatformConnectCard } from '@/components/social/PlatformConnectCard'
+import { PlatformLogo } from '@/components/landing/PlatformLogo'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -32,11 +34,6 @@ export default function ConnectionsPage() {
   const available = atLimit ? [] : PLATFORMS.filter((platform) => !connected.has(platform))
   const more = atLimit || data?.configured === false || error ? []
     : PLATFORMS.filter((platform) => connected.has(platform) && data?.capabilities[platform]?.configured)
-  const active = accounts.filter((account) => account.status === 'active')
-  const state: AutomationState =
-    active.some((account) => account.automation_mode === 'auto_publish' && data?.capabilities[account.platform].canAutoPublish) ? 'auto'
-      : active.some((account) => account.automation_mode !== 'manual') ? 'review'
-        : accounts.length ? 'manual' : 'none'
 
   useOAuthCallbackToast('Wähle jetzt die gewünschte Automatisierung. Neue Kanäle starten ohne Auto-Publish.')
 
@@ -55,8 +52,6 @@ export default function ConnectionsPage() {
 
         <PublishingNotice error={error} configured={data?.configured} detail={data?.error} onRetry={refresh} />
 
-        <AutomationFlow connected={accounts.length} total={PLATFORMS.length} state={state} />
-
         {loading ? (
           <div role="status" aria-label="Kanäle werden geladen" className="mt-10 grid gap-4 sm:grid-cols-3">
             {PLATFORMS.map((platform) => <div key={platform} className="glass-tile h-64 animate-pulse rounded-2xl" />)}
@@ -65,12 +60,33 @@ export default function ConnectionsPage() {
 
         {accounts.length ? (
           <section aria-labelledby="connected-heading" className="mt-10">
-            <h2 id="connected-heading" className="mb-4 flex items-baseline gap-2 text-base font-semibold tracking-tight">
-              Verbunden
-              <span className="text-sm font-normal text-muted-foreground tabular-nums">
-                {limit !== undefined ? `${accounts.length} von ${limit}` : accounts.length}
-              </span>
-            </h2>
+            <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <h2 id="connected-heading" className="flex items-baseline gap-2 text-base font-semibold tracking-tight">
+                Verbunden
+                <span className="text-sm font-normal text-muted-foreground tabular-nums">
+                  {limit !== undefined ? `${accounts.length} von ${limit}` : accounts.length}
+                </span>
+              </h2>
+              {atLimit && !outsidePlan.length ? (
+                <p className="text-xs text-muted-foreground">
+                  Alle Kanäle deines Tarifs sind belegt ·{' '}
+                  <Link href="/dashboard/billing" className="font-medium text-foreground underline underline-offset-4">Tarif wechseln</Link>
+                </p>
+              ) : more.length ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger render={<Button variant="outline" size="sm" className="rounded-full" />}>
+                    <Plus className="size-3.5" />Kanal hinzufügen
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-auto min-w-48">
+                    {more.map((platform) => (
+                      <DropdownMenuItem key={platform} render={<a href={`/api/oauth/${platform}`} />}>
+                        <PlatformLogo platform={platform} className="size-4" />{PLATFORM_LABEL[platform]}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : null}
+            </div>
             {outsidePlan.length ? (
               <p role="alert" className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm leading-relaxed">
                 {outsidePlan.map((account) => account.platform_username ?? PLATFORM_LABEL[account.platform]).join(', ')}{' '}
@@ -78,7 +94,7 @@ export default function ConnectionsPage() {
                 Trenne einen Kanal oder <Link href="/dashboard/billing" className="font-medium underline underline-offset-4">wechsle den Tarif</Link>.
               </p>
             ) : null}
-            <div className="grid items-start gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-3">
               {accounts.map((account) => (
                 <AccountCard
                   key={`${account.id}:${account.updated_at}:${account.automation_mode}:${account.auto_publish_min_score}`}
@@ -105,21 +121,6 @@ export default function ConnectionsPage() {
                 />
               ))}
             </div>
-          </section>
-        ) : null}
-
-        {!loading && accounts.length > 0 && (more.length > 0 || (atLimit && !outsidePlan.length)) ? (
-          <section aria-label="Weitere Kanäle" className="mt-6 flex flex-wrap items-center gap-2">
-            {atLimit ? (
-              <p className="text-sm text-muted-foreground">
-                Alle {limit} {limit === 1 ? 'Kanal' : 'Kanäle'} deines Tarifs sind belegt.{' '}
-                <Link href="/dashboard/billing" className="font-medium text-foreground underline underline-offset-4">Tarif wechseln</Link>
-              </p>
-            ) : more.map((platform) => (
-              <Button key={platform} variant="outline" size="sm" className="rounded-full" nativeButton={false} render={<a href={`/api/oauth/${platform}`} />}>
-                Weiteren {PLATFORM_LABEL[platform]}-Kanal verbinden<ArrowUpRight className="size-3.5" />
-              </Button>
-            ))}
           </section>
         ) : null}
 
@@ -150,14 +151,27 @@ export default function ConnectionsPage() {
 
         {!loading && data ? (
           <footer className="mt-10 flex flex-wrap items-start justify-between gap-4 border-t border-foreground/[0.06] pt-5">
-            <p className="flex max-w-xl gap-2 text-xs leading-relaxed text-muted-foreground">
-              <Info className="mt-0.5 size-3.5 shrink-0" />
-              Deine Auswahl gilt für neue Link-Importe. Bereits erstellte Clips werden nicht nachträglich veröffentlicht, und veröffentlicht wird immer die ursprüngliche Clip-Version ohne spätere Änderungen im Editor.
-            </p>
+            <ul className="max-w-xl space-y-1.5 text-xs leading-relaxed text-muted-foreground">
+              <FooterNote>Gilt ab deinem nächsten Link. Bereits erstellte Clips werden nicht nachträglich veröffentlicht.</FooterNote>
+              <FooterNote>Veröffentlicht wird die ursprüngliche Clip-Version, ohne spätere Änderungen im Editor.</FooterNote>
+              <FooterNote>
+                Zwischen zwei Clips eines Kanals liegen 8 Stunden. Zeitpunkt und Status siehst du in der{' '}
+                <Link href="/dashboard/calendar" className="text-foreground underline decoration-foreground/30 underline-offset-4 hover:decoration-foreground">Queue</Link>.
+              </FooterNote>
+            </ul>
             <Button variant="ghost" size="sm" className="rounded-full" onClick={refresh}><RefreshCw className="size-3.5" />Aktualisieren</Button>
           </footer>
         ) : null}
       </div>
     </ScrollArea>
+  )
+}
+
+function FooterNote({ children }: { children: ReactNode }) {
+  return (
+    <li className="flex gap-2.5">
+      <span aria-hidden className="mt-[0.5rem] size-1 shrink-0 rounded-full bg-muted-foreground/50" />
+      <span>{children}</span>
+    </li>
   )
 }

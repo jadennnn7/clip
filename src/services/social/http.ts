@@ -55,8 +55,20 @@ export function providerError(status: number, body: unknown, label: string, muta
   const error = asObject(object.error)
   const nested = Array.isArray(error.errors) ? asObject(error.errors[0]) : {}
   const code = String(nested.reason ?? error.code ?? object.error ?? '')
+  // TikTok returns 403 for an unverified download domain, even with valid tokens.
+  // Reconnecting the channel cannot repair this configuration error.
+  if (code === 'url_ownership_unverified') {
+    return new PublishError('TikTok hat die Video-Domain noch nicht verifiziert. Verifiziere die Domain oder den URL-Präfix in der TikTok-Entwicklerkonsole und versuche den Upload danach erneut.', 'terminal')
+  }
+  if (code === 'unaudited_client_can_only_post_to_private_accounts') {
+    return new PublishError('TikTok erlaubt dieser App bis zum App-Audit nur private Testposts auf einem privaten TikTok-Konto. Öffentliche Direct Posts benötigen die TikTok-Freigabe.', 'terminal')
+  }
+  if (code === 'privacy_level_option_mismatch') {
+    return new PublishError('Die gewählte TikTok-Sichtbarkeit ist nicht mehr verfügbar. Öffne den Clip und wähle sie erneut.', 'terminal')
+  }
+  if (code === 'spam_risk_user_banned_from_posting') return new PublishError('TikTok hat Veröffentlichungen für diesen Kanal gesperrt. Prüfe den Kanal direkt in TikTok.', 'terminal')
   let kind = classifyHttpStatus(status)
-  if (/quotaExceeded|dailyLimitExceeded|uploadLimitExceeded|spam_risk_too_many/i.test(code) || ['4', '17', '32', '613'].includes(code)) kind = 'quota'
+  if (/quotaExceeded|dailyLimitExceeded|uploadLimitExceeded|spam_risk_too_many|reached_active_user_cap/i.test(code) || ['4', '17', '32', '613'].includes(code)) kind = 'quota'
   else if (/invalid_grant|access_token_invalid|scope_not_authorized|auth_removed|invalid_token|invalid_client/i.test(code) || ['190', '102'].includes(code)) kind = 'auth'
   else if (/rate_limit|userRateLimitExceeded/i.test(code)) kind = 'retryable'
   else if (/internal|backendError/i.test(code) || error.is_transient === true) kind = mutation ? 'uncertain' : 'retryable'
@@ -67,9 +79,9 @@ export function providerError(status: number, body: unknown, label: string, muta
   return new PublishError(`${label}: Plattformfehler ${status}${safeCode}.`, kind)
 }
 
-export async function fetchResponse(url: string, init: RequestInit, label: string, mutation = false): Promise<Response> {
+export async function fetchResponse(url: string, init: RequestInit, label: string, mutation = false, redirect: 'error' | 'manual' = 'error'): Promise<Response> {
   try {
-    return await fetch(url, { ...init, cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(90_000) })
+    return await fetch(url, { ...init, cache: 'no-store', redirect, signal: AbortSignal.timeout(90_000) })
   } catch {
     throw new PublishError(`${label}: keine verlässliche Antwort der Plattform.`, mutation ? 'uncertain' : 'retryable')
   }

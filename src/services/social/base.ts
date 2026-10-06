@@ -1,4 +1,5 @@
 import type { SocialPlatform } from '@/types/database'
+import type { TikTokPostOptions } from '@/types/tiktok'
 
 /**
  * Gemeinsames Interface aller Plattform-Adapter.
@@ -101,6 +102,7 @@ export interface ProviderAccount {
   accessToken: string
   platformAccountId: string
   metaIgUserId?: string | null
+  scopes?: string[]
 }
 
 export interface PublishParams {
@@ -110,6 +112,8 @@ export interface PublishParams {
   title: string
   description: string
   hashtags: string[]
+  tiktokPost?: TikTokPostOptions
+  videoDurationSeconds?: number
   /**
    * Eindeutiger Schlüssel dieses Veröffentlichungsvorgangs. Wird an die
    * Plattform weitergereicht, wo sie Idempotenz unterstützt.

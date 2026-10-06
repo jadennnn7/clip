@@ -19,6 +19,8 @@ export interface AssistantMessage {
   role: 'user' | 'assistant'
   text: string
   links?: AssistantLink[]
+  /** Der Assistent kann nicht helfen — das Widget bietet die Nachricht an das Team an. */
+  handoff?: boolean
 }
 
 /** So viel Verlauf geht an das Modell — genug für Rückfragen, nicht mehr. */

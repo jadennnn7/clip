@@ -181,7 +181,7 @@ export function ProcessingClipCard({ project, compact = false }: { project: Proj
     <article
       aria-busy="true"
       aria-label={`${project.title}: wird geschnitten${percent !== null ? `, ${percent} Prozent` : ''}`}
-      className={cn('rise-in min-w-0', compact ? 'w-[156px] shrink-0 snap-start' : 'rounded-2xl border bg-card p-2')}
+      className={cn('rise-in min-w-0', compact ? 'w-[156px] shrink-0 snap-start' : 'glass-tile rounded-2xl p-2')}
     >
       <div
         className="relative overflow-hidden rounded-xl bg-neutral-950 ring-1 ring-black/[0.06] ring-inset dark:ring-white/10"
@@ -267,7 +267,7 @@ export function FailedClipCard({ project }: { project: Project }) {
   }
 
   return (
-    <article className="rise-in min-w-0 rounded-2xl border bg-card p-2">
+    <article className="rise-in min-w-0 glass-tile rounded-2xl p-2">
       <div
         className="relative overflow-hidden rounded-xl bg-neutral-950 ring-1 ring-white/10 ring-inset"
         style={{ aspectRatio: outputFormatCssAspect(outputFormat) }}
@@ -295,7 +295,12 @@ export function FailedClipCard({ project }: { project: Project }) {
   )
 }
 
-/** Platzhalter für einen Clip, der gleich erscheint. */
+/**
+ * Platzhalter für einen Clip, der gleich erscheint — gebaut wie `ClipCard`:
+ * im Raster ohne Rahmen, in der Liste als Glaskachel, mit Score, Titel und
+ * Statuszeile an derselben Stelle. Wenn der Clip fertig ist, wechselt nur
+ * der Inhalt, nicht die Form.
+ */
 export function GhostClipCard({
   delay = 0,
   outputFormat = '9:16',
@@ -305,29 +310,38 @@ export function GhostClipCard({
   outputFormat?: OutputFormat
   layout?: 'grid' | 'list'
 }) {
+  const bar = 'rounded-full bg-foreground/[0.07]'
   return (
     <div
       aria-hidden
       className={cn(
-        'rise-in min-w-0 rounded-2xl border bg-card p-2',
-        layout === 'list' && 'grid grid-cols-[7rem_minmax(0,1fr)] gap-x-4 sm:grid-cols-[9rem_minmax(0,1fr)]',
+        'rise-in min-w-0',
+        layout === 'list' && 'grid grid-cols-[7rem_minmax(0,1fr)] grid-rows-[auto_1fr] items-start gap-x-4 glass-tile rounded-2xl p-3 sm:grid-cols-[9rem_minmax(0,1fr)]',
       )}
       style={{ animationDelay: `${delay}ms` }}
     >
       <div
-        className="shimmer relative rounded-xl bg-foreground/[0.04]"
+        className={cn(
+          'shimmer relative rounded-xl bg-foreground/[0.04] ring-1 ring-black/[0.06] dark:ring-white/10',
+          layout === 'list' && 'col-start-1 row-span-2 row-start-1 w-full',
+        )}
         style={{ animationDelay: `${delay}ms`, aspectRatio: outputFormatCssAspect(outputFormat) }}
       >
         <div className="absolute top-2.5 left-2.5 h-4 w-12 rounded-full bg-foreground/[0.06]" />
         <div className="absolute inset-x-6 bottom-[26%] flex flex-col items-center gap-1.5">
-          <div className="h-3 w-4/5 rounded-full bg-foreground/[0.07]" />
-          <div className="h-3 w-3/5 rounded-full bg-foreground/[0.07]" />
+          <div className={cn(bar, 'h-3 w-4/5')} />
+          <div className={cn(bar, 'h-3 w-3/5')} />
         </div>
       </div>
-      <div className={cn('px-1.5 pb-1', layout === 'grid' ? 'pt-3' : 'pt-1')}>
+      <div className={cn('flex h-8 items-center px-0.5', layout === 'grid' ? 'mt-2.5' : 'col-start-2 row-start-1')}>
         <div className="h-6 w-10 rounded-md bg-foreground/[0.07]" />
-        <div className="mt-2.5 h-3 w-4/5 rounded-full bg-foreground/[0.07]" />
-        <div className="mt-1.5 h-3 w-3/5 rounded-full bg-foreground/[0.07]" />
+      </div>
+      <div className={cn('space-y-1.5 px-0.5 py-1', layout === 'grid' ? 'mt-1' : 'col-start-2 row-start-2 mt-2 self-start')}>
+        <div className={cn(bar, 'h-3 w-4/5')} />
+        <div className={cn(bar, 'h-3 w-3/5')} />
+      </div>
+      <div className={cn('mt-2.5 border-t border-border pt-2.5', layout === 'list' && 'col-start-2 row-start-3')}>
+        <div className={cn(bar, 'my-1 h-2.5 w-2/3')} />
       </div>
     </div>
   )

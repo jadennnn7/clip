@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type Stripe from 'stripe'
 import { getStripe } from '@/lib/stripe/client'
+import { netCents } from '@/lib/partner'
 import { CREDIT_PACKS, PLANS } from '@/lib/stripe/plans'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { recordPartnerCommission, reversePartnerCommission } from '@/services/billing/partner'
 import type { SubscriptionTier } from '@/types/database'
 
 /**
@@ -14,6 +16,11 @@ import type { SubscriptionTier } from '@/types/database'
  * daraus Kontingent und Gutschriften, `grant_token_pack` bucht Nachkäufe
  * einmal je Checkout-Session. `invoice.upcoming` lässt Jahresabos nach dem
  * ersten Jahr monatlich weiterlaufen.
+ *
+ * Partnerprogramm: Jede bezahlte Rechnung (`invoice.paid`) und jeder
+ * Nachkauf eines geworbenen Kontos bucht eine Provision, Erstattungen
+ * (`charge.refunded`) und Rückbuchungen (`charge.dispute.created`) nehmen
+ * sie anteilig zurück.
  */
 export async function POST(req: NextRequest) {
   const stripe = getStripe()
@@ -83,6 +90,35 @@ export async function POST(req: NextRequest) {
         const { error } = await db.rpc('grant_token_pack', { p_user_id: userId, p_tokens: pack.credits, p_reference: session.id })
         if (error) throw error
         console.log(`[stripe] ${pack.credits} Credits für Checkout ${session.id}`)
+        const total = session.amount_total ?? 0
+        const commission = await recordPartnerCommission(db, {
+          customerId: userId,
+          reference: session.id,
+          paymentIntent: idOf(session.payment_intent),
+          netCents: netCents({ paid: total, total, tax: session.total_details?.amount_tax ?? 0, taxComputed: session.automatic_tax.enabled }),
+          currency: session.currency ?? 'eur',
+          paidAt: new Date(event.created * 1000),
+        })
+        if (commission !== null) console.log(`[stripe] Partnerprovision ${commission} ct für Checkout ${session.id}`)
+        break
+      }
+
+      case 'invoice.paid':
+        await creditPartnerForInvoice(stripe, db, event.data.object as Stripe.Invoice, event.created)
+        break
+
+      case 'charge.refunded': {
+        const charge = event.data.object as Stripe.Charge
+        const paymentIntent = idOf(charge.payment_intent)
+        if (paymentIntent) await reversePartnerCommission(db, paymentIntent, charge.amount_refunded, charge.amount_captured || charge.amount)
+        break
+      }
+
+      case 'charge.dispute.created': {
+        // Eine Rückbuchung nimmt die ganze Provision zurück; gewinnt man den
+        // Streit, kommt sie nicht wieder — das wäre ein Fall für Handarbeit.
+        const paymentIntent = idOf((event.data.object as Stripe.Dispute).payment_intent)
+        if (paymentIntent) await reversePartnerCommission(db, paymentIntent, 1, 1)
         break
       }
 
@@ -109,6 +145,44 @@ export async function POST(req: NextRequest) {
     console.error('Error processing webhook:', error)
     return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 })
   }
+}
+
+/**
+ * Provision für eine bezahlte Rechnung eines geworbenen Kontos. Erst prüfen,
+ * ob das Konto überhaupt einen Partner hat — sonst kostet jede Rechnung einen
+ * Abruf bei Stripe. Die Zahlung selbst (für spätere Erstattungen) steht nur
+ * in der vollen Rechnung.
+ */
+async function creditPartnerForInvoice(stripe: Stripe, db: ReturnType<typeof createAdminClient>, event: Stripe.Invoice, created: number) {
+  if (!event.id || event.amount_paid <= 0) return
+  const userId = await findUser(db, idOf(event.customer), event.parent?.subscription_details?.metadata?.supabase_user_id)
+  // Gelöschtes Konto: Die letzte Rechnung kann nach der Löschung eintreffen.
+  if (!userId) return
+  const { data: profile, error } = await db.from('profiles').select('referred_by').eq('id', userId).maybeSingle()
+  if (error) throw error
+  if (!profile?.referred_by) return
+
+  const invoice = await stripe.invoices.retrieve(event.id, { expand: ['payments'] })
+  const payment = invoice.payments?.data.find((item) => item.status === 'paid') ?? invoice.payments?.data[0]
+  const commission = await recordPartnerCommission(db, {
+    customerId: userId,
+    reference: invoice.id!,
+    paymentIntent: idOf(payment?.payment.payment_intent),
+    netCents: netCents({
+      paid: invoice.amount_paid,
+      total: invoice.total,
+      tax: invoice.total - (invoice.total_excluding_tax ?? invoice.total),
+      taxComputed: invoice.automatic_tax.enabled || (invoice.total_taxes?.length ?? 0) > 0,
+    }),
+    currency: invoice.currency,
+    paidAt: new Date((invoice.status_transitions.paid_at ?? created) * 1000),
+  })
+  if (commission !== null) console.log(`[stripe] Partnerprovision ${commission} ct für Rechnung ${invoice.id}`)
+}
+
+function idOf(ref: string | { id: string } | null | undefined): string | null {
+  if (!ref) return null
+  return typeof ref === 'string' ? ref : ref.id
 }
 
 /** Monats- und Jahrespreis eines Tarifs geben dieselben Credits pro Monat. */

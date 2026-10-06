@@ -122,8 +122,17 @@ verknüpftem Instagram-Professional-Konto.
 Die App verwendet `YOUTUBE_AUDIT_PASSED=true` beziehungsweise
 `META_APP_REVIEW_PASSED=true` zur Freigabe von Auto-Publish. Diese Flags erst nach
 der tatsächlichen Plattformfreigabe setzen. Ohne YouTube-Flag fordert der
-Adapter private Uploads an. TikTok bleibt unabhängig von Audit-Flags beim
-Inbox-Upload mit anschließender Veröffentlichung in TikTok. Wie die Freigaben
+Adapter private Uploads an. TikTok verwendet für neue manuelle Veröffentlichungen
+Direct Post mit `video.publish`. Aktiviere die Direct-Post-Funktion im TikTok
+Developer Portal und verbinde bestehende Inbox-Kanäle erneut, damit sie die neue
+Berechtigung erhalten. In der Clip-Vorschau werden aktuelle Creator-Optionen
+geladen; Sichtbarkeit und Zustimmung müssen für jeden Beitrag gewählt werden.
+Ohne Audit sind nur private `SELF_ONLY`-Testposts auf privaten TikTok-Konten
+erlaubt. Setze `TIKTOK_AUDIT_PASSED=true` erst nach dem tatsächlichen Audit und
+übernimm den Wert in App und Worker. Erst dann werden die von TikTok angebotenen
+öffentlichen Sichtbarkeiten freigeschaltet. Generierte TikTok-Clips bleiben bis
+zur Auswahl im Veröffentlichungsdialog in der Freigabe-Queue; bestehende
+Inbox-Aufträge werden nicht automatisch nochmals direkt gepostet. Wie die Freigaben
 beantragt werden, samt Begründungstexten: [Plattform-Freigaben](plattform-freigaben.md).
 
 ## 5. Konfiguration übernehmen

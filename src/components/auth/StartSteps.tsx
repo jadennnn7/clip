@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import Image from 'next/image'
 import { Check, Link2, Mail, Plug } from 'lucide-react'
 import { LANDING_PLATFORMS, PlatformLogo } from '@/components/landing/PlatformLogo'
 import { getPlan, planFacts } from '@/lib/stripe/plans'
@@ -16,10 +17,10 @@ import { cn } from '@/lib/utils'
  * wissen, was er bekommt.
  */
 
-const thumb = (id: string) =>
-  `https://images.unsplash.com/photo-${id}?w=72&h=128&fit=crop&crop=faces,center&q=70&auto=format`
-
-const THUMBS = ['1500648767791-00dcc994a43e', '1494790108377-be9c29b29330', '1507003211169-0a1dd7228f2d']
+/** Standbilder echter Ocuris-Clips aus `public/gallery/` — dieselben wie in
+ *  der Galerie der Startseite. Gewählt nach erkennbarer Person, weil die
+ *  Vorschau nur 32 px breit ist. */
+const THUMBS = ['holiday', 'streak', 'fresh']
 
 const FREE = getPlan('free')
 
@@ -62,10 +63,9 @@ export function StartSteps({ className }: { className?: string }) {
 
         <Step number={3} icon={<Link2 className="size-4" />} title="Erstes Video einfügen" text="Link oder Datei – die Clips entstehen von selbst.">
           <div className="mt-3 flex items-end gap-1.5">
-            {THUMBS.map((id) => (
-              <span key={id} className="relative h-14 w-8 overflow-hidden rounded-md ring-1 ring-white/15">
-                {/* eslint-disable-next-line @next/next/no-img-element -- dekorativ, per URL zugeschnitten */}
-                <img src={thumb(id)} alt="" loading="lazy" decoding="async" className="size-full object-cover" />
+            {THUMBS.map((slug) => (
+              <span key={slug} className="relative h-14 w-8 overflow-hidden rounded-md ring-1 ring-white/15">
+                <Image src={`/gallery/${slug}.jpg`} alt="" fill sizes="32px" className="object-cover" />
               </span>
             ))}
             <span className="ml-1 text-xs text-white/45">+ weitere Clips</span>

@@ -11,8 +11,8 @@ const modules = new Map()
 function load(path) {
   const full = resolve(path)
   if (modules.has(full)) return modules.get(full).exports
-  const module = { exports: {} }
-  modules.set(full, module)
+  const loaded = { exports: {} }
+  modules.set(full, loaded)
   const compiled = ts.transpileModule(readFileSync(full, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText
@@ -20,13 +20,13 @@ function load(path) {
     if (specifier === 'server-only') return {}
     if (!specifier.startsWith('.')) throw new Error(`Unexpected test import: ${specifier}`)
     return load(resolve(dirname(full), `${specifier}.ts`))
-  }, module, module.exports)
-  return module.exports
+  }, loaded, loaded.exports)
+  return loaded.exports
 }
 const root = fileURLToPath(new URL('../src/services/social/', import.meta.url))
 const { youtubeProvider } = load(resolve(root, 'youtube.ts'))
 const { instagramProvider } = load(resolve(root, 'instagram.ts'))
-const { tiktokProvider } = load(resolve(root, 'tiktok.ts'))
+const { tiktokProvider, getTikTokCreatorInfo, validateTikTokPost } = load(resolve(root, 'tiktok.ts'))
 const { PublishError } = load(resolve(root, 'base.ts'))
 const { providerError } = load(resolve(root, 'http.ts'))
 
@@ -34,7 +34,7 @@ const originalFetch = globalThis.fetch
 const envKeys = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'META_APP_ID', 'META_APP_SECRET', 'TIKTOK_CLIENT_KEY', 'TIKTOK_CLIENT_SECRET', 'YOUTUBE_AUDIT_PASSED', 'TIKTOK_AUDIT_PASSED']
 const originalEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]))
 for (const key of envKeys) process.env[key] = 'test-only-placeholder'
-afterEach(() => { globalThis.fetch = originalFetch })
+afterEach(() => { globalThis.fetch = originalFetch; process.env.TIKTOK_AUDIT_PASSED = 'false' })
 process.on('exit', () => { for (const key of envKeys) { if (originalEnv[key] === undefined) delete process.env[key]; else process.env[key] = originalEnv[key] } })
 
 const response = (body, status = 200, headers = {}) => new Response(body == null ? null : JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...headers } })
@@ -60,14 +60,125 @@ function job(checkpoint = {}) {
 }
 const failsAs = (kind) => (error) => error instanceof PublishError && error.kind === kind
 
-test('OAuth URLs preserve state and TikTok never infers Direct Post permission from audit flag', () => {
+const directOptions = (overrides = {}) => ({ privacyLevel: 'PUBLIC_TO_EVERYONE', allowComment: false, allowDuet: false, allowStitch: false, commercialContent: false, ownBrand: false, brandedContent: false, isAigc: false, consent: true, ...overrides })
+const creatorResponse = (overrides = {}) => ttResponse({ creator_username: 'creator', creator_nickname: 'Creator', privacy_level_options: ['PUBLIC_TO_EVERYONE', 'MUTUAL_FOLLOW_FRIENDS', 'SELF_ONLY'], comment_disabled: false, duet_disabled: false, stitch_disabled: true, max_video_post_duration_sec: 60, ...overrides })
+function directJob(options = directOptions(), checkpoint = {}) {
+  const j = job(checkpoint)
+  Object.assign(j.params, { tiktokPost: options, videoDurationSeconds: 30 })
+  j.params.account.scopes = ['user.info.basic', 'video.publish']
+  return j
+}
+
+test('legacy Inbox authorization cannot initiate Direct Post and unaudited creators only offer private tests', async () => {
+  const j = job()
+  const blocked = queueFetch([])
+  await assert.rejects(getTikTokCreatorInfo(j.params.account), /video.publish/)
+  blocked.done()
+  process.env.TIKTOK_AUDIT_PASSED = 'false'
+  const q = queueFetch([creatorResponse()])
+  const creator = await getTikTokCreatorInfo(directJob().params.account)
+  assert.deepEqual(creator.privacyOptions, ['SELF_ONLY'])
+  assert.equal(creator.publicPostingEnabled, false)
+  q.done()
+})
+
+test('Direct Post sends the creator-selected metadata and only marks confirmed public posts published', async () => {
+  process.env.TIKTOK_AUDIT_PASSED = 'true'
+  const j = directJob(directOptions({ allowComment: true, commercialContent: true, ownBrand: true, isAigc: true }))
+  const q = queueFetch([creatorResponse(), (url, init) => {
+    assert.equal(new URL(url).pathname, '/v2/post/publish/video/init/')
+    assert.equal(j.saved().tiktok_direct_publish_id_pending, 'true')
+    assert.deepEqual(JSON.parse(init.body).post_info, {
+      title: 'Description\n\n#shorts', privacy_level: 'PUBLIC_TO_EVERYONE',
+      disable_comment: false, disable_duet: true, disable_stitch: true,
+      brand_organic_toggle: true, brand_content_toggle: false, is_aigc: true,
+    })
+    return ttResponse({ publish_id: 'direct-1' })
+  }, ttResponse({ status: 'PUBLISH_COMPLETE', publicly_available_post_id: ['post-1'] })])
+  const result = await tiktokProvider.publish(j.params)
+  assert.equal(result.requiresManualStep, false)
+  assert.equal(result.platformPostUrl, 'https://www.tiktok.com/@creator/video/post-1')
+  assert.equal(j.saved().tiktok_direct_publish_id, 'direct-1')
+  assert.equal(j.saved().tiktok_publish_id, undefined)
+  q.done()
+})
+
+test('private Direct Posts never promise public visibility or route to the Inbox', async () => {
+  process.env.TIKTOK_AUDIT_PASSED = 'false'
+  const j = directJob(directOptions({ privacyLevel: 'SELF_ONLY' }))
+  const q = queueFetch([creatorResponse(), (url) => {
+    assert.equal(new URL(url).pathname, '/v2/post/publish/video/init/')
+    return ttResponse({ publish_id: 'private-1' })
+  }, ttResponse({ status: 'PUBLISH_COMPLETE' })])
+  const result = await tiktokProvider.publish(j.params)
+  assert.equal(result.requiresManualStep, true)
+  assert.match(result.manualStepReason, /Privat auf TikTok veröffentlicht/)
+  q.done()
+})
+
+test('Direct Post validates consent, current visibility, duration, interactions and commercial disclosure before init', async () => {
+  process.env.TIKTOK_AUDIT_PASSED = 'true'
+  const q = queueFetch([creatorResponse()])
+  const creator = await getTikTokCreatorInfo(directJob().params.account)
+  validateTikTokPost(directOptions(), creator, 60)
+  for (const [options, duration] of [
+    [directOptions({ consent: false }), 30], [directOptions({ privacyLevel: 'FOLLOWER_OF_CREATOR' }), 30],
+    [directOptions(), 61], [directOptions(), NaN], [directOptions({ allowStitch: true }), 30],
+    [directOptions({ commercialContent: true }), 30], [directOptions({ ownBrand: true }), 30],
+    [directOptions({ commercialContent: true, brandedContent: true, privacyLevel: 'SELF_ONLY' }), 30],
+  ]) assert.throws(() => validateTikTokPost(options, creator, duration), failsAs('terminal'))
+  q.done()
+  const rejected = directJob(directOptions({ allowStitch: true }))
+  const initBlocked = queueFetch([creatorResponse()])
+  await assert.rejects(tiktokProvider.publish(rejected.params), failsAs('terminal'))
+  assert.equal(initBlocked.calls.length, 1)
+  initBlocked.done()
+})
+
+test('ambiguous Direct Post creation is never duplicated on worker retry', async () => {
+  process.env.TIKTOK_AUDIT_PASSED = 'true'
+  const j = directJob()
+  let q = queueFetch([creatorResponse(), () => { throw new Error('lost response') }])
+  await assert.rejects(tiktokProvider.publish(j.params), failsAs('uncertain'))
+  q.done()
+  q = queueFetch([])
+  await assert.rejects(tiktokProvider.publish(j.retry()), failsAs('uncertain'))
+  assert.equal(q.calls.length, 0)
+  q.done()
+})
+
+test('existing Direct Posts resume status checks without creating another upload', async () => {
+  const j = directJob(directOptions(), { tiktok_direct_publish_id: 'direct-1', tiktok_creator_username: 'creator' })
+  const q = queueFetch([(url) => {
+    assert.equal(new URL(url).pathname, '/v2/post/publish/status/fetch/')
+    return ttResponse({ status: 'PUBLISH_COMPLETE', publicaly_available_post_id: ['post-1'] })
+  }])
+  assert.equal((await tiktokProvider.publish(j.params)).requiresManualStep, false)
+  q.done()
+})
+
+test('an existing Inbox upload is not reused or resent as a Direct Post', async () => {
+  const j = directJob(directOptions(), { tiktok_publish_id: 'inbox-1' })
+  const q = queueFetch([])
+  await assert.rejects(tiktokProvider.publish(j.params), failsAs('terminal'))
+  assert.equal(q.calls.length, 0)
+  q.done()
+})
+
+test('TikTok audit and privacy rejections do not invalidate channel credentials', () => {
+  for (const code of ['unaudited_client_can_only_post_to_private_accounts', 'privacy_level_option_mismatch', 'spam_risk_user_banned_from_posting']) {
+    assert.equal(providerError(403, { error: { code } }, 'TikTok', true).kind, 'terminal')
+  }
+})
+
+test('OAuth URLs preserve state and new TikTok connections request Direct Post permission', () => {
   process.env.TIKTOK_AUDIT_PASSED = 'true'
   for (const provider of [youtubeProvider, instagramProvider, tiktokProvider]) {
     const url = new URL(provider.getAuthUrl({ state: 'signed-state', redirectUri: 'https://app.example.com/callback' }))
     assert.equal(url.searchParams.get('state'), 'signed-state')
     assert.equal(url.searchParams.get('redirect_uri'), 'https://app.example.com/callback')
   }
-  assert.equal(new URL(tiktokProvider.getAuthUrl({ state: 'x', redirectUri: 'https://app.example.com/callback' })).searchParams.get('scope'), 'user.info.basic,video.upload')
+  assert.equal(new URL(tiktokProvider.getAuthUrl({ state: 'x', redirectUri: 'https://app.example.com/callback' })).searchParams.get('scope'), 'user.info.basic,video.publish')
 })
 
 test('Google code exchange checks actually granted permissions and retains refresh token expiry', async () => {
@@ -86,6 +197,7 @@ test('Google code exchange checks actually granted permissions and retains refre
 test('TikTok refresh preserves rotated access and refresh tokens and their real grants', async () => {
   const q = queueFetch([(url, init) => {
     assert.equal(new URL(url).pathname, '/v2/oauth/token/')
+    assert.equal(init.headers['Content-Type'], 'application/x-www-form-urlencoded')
     assert.equal(init.body.get('grant_type'), 'refresh_token')
     assert.equal(init.body.get('refresh_token'), 'old-refresh')
     return response({ access_token: 'new-access', refresh_token: 'new-refresh', expires_in: 86400, refresh_expires_in: 30000000, scope: 'user.info.basic,video.upload' })
@@ -108,10 +220,11 @@ test('TikTok authorization and code exchange include PKCE challenge and verifier
 
   const q = queueFetch([(url, init) => {
     assert.equal(new URL(url).pathname, '/v2/oauth/token/')
+    assert.equal(init.headers['Content-Type'], 'application/x-www-form-urlencoded')
     assert.equal(init.body.get('grant_type'), 'authorization_code')
     assert.equal(init.body.get('code'), 'auth-code')
     assert.equal(init.body.get('code_verifier'), 'verifier-123')
-    return response({ access_token: 'access-1', refresh_token: 'refresh-1', expires_in: 86400, scope: 'user.info.basic video.upload' })
+    return response({ access_token: 'access-1', refresh_token: 'refresh-1', expires_in: 86400, scope: 'user.info.basic video.publish' })
   }])
   const tokens = await tiktokProvider.exchangeCode({
     code: 'auth-code',
@@ -151,7 +264,11 @@ test('YouTube persists session before streaming and reports actual private visib
   process.env.YOUTUBE_AUDIT_PASSED = 'true'
   const j = job()
   const q = queueFetch([
-    new Response(null, { headers: { 'Content-Length': '4', ETag: 'v1' } }),
+    (url, init) => {
+      assert.equal(init.method, 'GET')
+      assert.equal(init.headers.Range, 'bytes=0-0')
+      return new Response(new Uint8Array([1]), { status: 206, headers: { 'Content-Length': '1', 'Content-Range': 'bytes 0-0/4', ETag: 'v1' } })
+    },
     (url, init) => {
       assert.equal(j.saved().youtube_session_url_pending, 'true')
       assert.equal(JSON.parse(init.body).status.privacyStatus, 'public')
@@ -162,7 +279,7 @@ test('YouTube persists session before streaming and reports actual private visib
       assert.equal(init.headers['If-Match'], 'v1')
       return new Response(new Uint8Array([1, 2, 3, 4]), { status: 206, headers: { 'Content-Range': 'bytes 0-3/4' } })
     },
-    (url, init) => { assert.equal(init.headers['Content-Range'], 'bytes 0-3/4'); return response({ id: 'video-1' }) },
+    (url, init) => { assert.equal(init.redirect, 'manual'); assert.equal(init.headers['Content-Range'], 'bytes 0-3/4'); return response({ id: 'video-1' }) },
     completeVideo('private'),
   ])
   const result = await youtubeProvider.publish(j.params)
@@ -171,10 +288,23 @@ test('YouTube persists session before streaming and reports actual private visib
   q.done()
 })
 
+test('YouTube storage denial does not invalidate Google credentials', async () => {
+  const q = queueFetch([new Response(null, { status: 403 })])
+  await assert.rejects(youtubeProvider.publish(job().params), failsAs('terminal'))
+  q.done()
+})
+
+test('YouTube rejects an invalid storage range before creating an upload', async () => {
+  const q = queueFetch([new Response(new Uint8Array([1]), { status: 206, headers: { 'Content-Length': '1', 'Content-Range': 'bytes 1-1/4' } })])
+  await assert.rejects(youtubeProvider.publish(job().params), failsAs('terminal'))
+  q.done()
+})
+
 test('YouTube reconciles a lost completed-upload response without sending a second video', async () => {
   const j = job({ youtube_session_url: 'https://www.googleapis.com/upload/youtube/v3/videos?upload_id=one', youtube_total_bytes: '4' })
   const q = queueFetch([(url, init) => {
     assert.equal(init.method, 'PUT')
+    assert.equal(init.redirect, 'manual')
     assert.equal(init.headers['Content-Range'], 'bytes */4')
     assert.equal(init.body, undefined)
     return response({ id: 'video-1' })
@@ -263,6 +393,19 @@ test('TikTok resumes an existing publish ID with status requests only', async ()
     return ttResponse({ status: 'SEND_TO_USER_INBOX' })
   }])
   await tiktokProvider.publish(j.params)
+  q.done()
+})
+
+test('TikTok domain verification failure does not invalidate the channel credentials', async () => {
+  const j = job()
+  const q = queueFetch([response({ error: { code: 'url_ownership_unverified' } }, 403)])
+  await assert.rejects(tiktokProvider.publish(j.params), (error) => {
+    assert.equal(error.kind, 'terminal')
+    assert.match(error.message, /Video-Domain.*verifiziert/)
+    assert.match(error.message, /TikTok-Entwicklerkonsole/)
+    return true
+  })
+  assert.equal(j.saved().tiktok_publish_id_pending, '')
   q.done()
 })
 

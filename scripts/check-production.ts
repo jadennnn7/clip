@@ -83,12 +83,15 @@ async function checkSupabaseAuth(): Promise<void> {
     signal: AbortSignal.timeout(15_000),
   }).catch(() => null)
   if (!response?.ok) return report('warning', 'SUPABASE_ACCESS_TOKEN', `Supabase-Management-API antwortet nicht (HTTP ${response?.status ?? '—'})`)
-  const auth = (await response.json()) as { smtp_host?: string | null; site_url?: string | null; uri_allow_list?: string | null; rate_limit_email_sent?: number | null; mailer_templates_magic_link_content?: string | null }
+  const auth = (await response.json()) as { smtp_host?: string | null; site_url?: string | null; uri_allow_list?: string | null; rate_limit_email_sent?: number | null; mailer_templates_magic_link_content?: string | null; mailer_templates_recovery_content?: string | null }
   const origin = value('NEXT_PUBLIC_APP_URL').replace(/\/$/, '')
   if (!auth.smtp_host) report('error', 'Supabase SMTP', 'nicht eingerichtet — der eingebaute Versand schafft nur wenige Magic Links pro Stunde (npm run auth:mail)')
   else console.log(`✓ Supabase SMTP: ${auth.smtp_host}${auth.rate_limit_email_sent ? `, Limit ${auth.rate_limit_email_sent} Mails/h` : ''}`)
   if (auth.smtp_host && !auth.mailer_templates_magic_link_content?.includes('token_hash')) {
     report('warning', 'Supabase Mail-Vorlage', 'ist noch die englische Standardvorlage — npm run auth:mail -- --apply')
+  }
+  if (auth.smtp_host && !auth.mailer_templates_recovery_content?.includes('token_hash')) {
+    report('warning', 'Supabase Mail-Vorlage „Passwort zurücksetzen"', 'ist noch die englische Standardvorlage — npm run auth:mail -- --apply')
   }
   if (origin && auth.site_url?.replace(/\/$/, '') !== origin) report('error', 'Supabase Site URL', `ist ${auth.site_url || 'leer'}, erwartet ${origin}`)
   const allowed = (auth.uri_allow_list ?? '').split(',').map((entry) => entry.trim())

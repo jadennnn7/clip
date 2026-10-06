@@ -149,6 +149,42 @@ docker exec -e PGOPTIONS='-c client_min_messages=warning' "$NAME" psql -U postgr
 docker exec -e PGOPTIONS='-c client_min_messages=warning' "$NAME" psql -U postgres -d migrated -v ON_ERROR_STOP=1 -q -f /tmp/rate-limits.sql
 rate_limit_tests migrated
 
+# Partnerprogramm: im vollen Schema, als Migration darüber (muss wiederholbar
+# sein) und auf der migrierten Datenbank.
+docker cp "$ROOT/supabase/migrations/20261006000000_partner_program.sql" "$NAME:/tmp/partner.sql" >/dev/null
+docker cp "$ROOT/supabase/tests/06-partner.sql" "$NAME:/tmp/" >/dev/null
+partner_tests() {
+  docker exec "$NAME" psql -U postgres -d "$1" -v ON_ERROR_STOP=1 -q -t -A -f /tmp/06-partner.sql 2>&1 \
+    | grep -vE "^(INSERT|SET|DO|RESET|SELECT|UPDATE|DELETE)" | grep -v '^$' \
+    | sed 's/^psql:[^ ]* NOTICE:  /  /; s/^/  /'
+}
+echo
+echo "Partner-Migration über schema.sql …"
+docker exec -e PGOPTIONS='-c client_min_messages=warning' "$NAME" psql -U postgres -v ON_ERROR_STOP=1 -q -f /tmp/partner.sql
+partner_tests postgres
+echo
+echo "Partner-Migration auf der migrierten Datenbank (zweimal) …"
+docker exec -e PGOPTIONS='-c client_min_messages=warning' "$NAME" psql -U postgres -d migrated -v ON_ERROR_STOP=1 -q -f /tmp/partner.sql
+docker exec -e PGOPTIONS='-c client_min_messages=warning' "$NAME" psql -U postgres -d migrated -v ON_ERROR_STOP=1 -q -f /tmp/partner.sql
+partner_tests migrated
+
+# Support-Anfragen: im vollen Schema und als Migration auf der migrierten Datenbank.
+docker cp "$ROOT/supabase/migrations/20261006120000_support_requests.sql" "$NAME:/tmp/support.sql" >/dev/null
+docker cp "$ROOT/supabase/tests/07-support.sql" "$NAME:/tmp/" >/dev/null
+support_tests() {
+  docker exec "$NAME" psql -U postgres -d "$1" -v ON_ERROR_STOP=1 -q -t -A -f /tmp/07-support.sql 2>&1 \
+    | grep -vE "^(INSERT|SET|DO|RESET|SELECT)" | grep -v '^$' \
+    | sed 's/^psql:[^ ]* NOTICE:  /  /; s/^/  /'
+}
+echo
+echo "Support-Anfragen im vollen Schema …"
+support_tests postgres
+echo
+echo "Support-Migration auf der migrierten Datenbank (zweimal) …"
+docker exec -e PGOPTIONS='-c client_min_messages=warning' "$NAME" psql -U postgres -d migrated -v ON_ERROR_STOP=1 -q -f /tmp/support.sql
+docker exec -e PGOPTIONS='-c client_min_messages=warning' "$NAME" psql -U postgres -d migrated -v ON_ERROR_STOP=1 -q -f /tmp/support.sql
+support_tests migrated
+
 # Kontolöschung: Nach dem Löschen des Auth-Nutzers bleibt keine Zeile übrig.
 docker cp "$ROOT/supabase/tests/05-account-deletion.sql" "$NAME:/tmp/" >/dev/null
 echo

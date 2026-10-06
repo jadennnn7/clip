@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import Link from 'next/link'
 import { LoaderCircle } from 'lucide-react'
+import { toast } from 'sonner'
 import { PageHeader } from '@/components/dashboard/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { deleteAccount } from '@/lib/account-client'
+import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from '@/lib/auth-password'
 import type { Account } from '@/lib/account'
 import { useBillingUsage } from '@/stores/billing-usage-store'
 
@@ -21,7 +23,7 @@ const DELETED = [
   'Ein laufendes Abo endet sofort, deine Zahlungsdaten löscht Stripe',
 ]
 
-/** Anmeldung und Kontolöschung. `account` ist `null` im Demo-Modus ohne Supabase. */
+/** Anmeldung, Passwort und Kontolöschung. `account` ist `null` im Demo-Modus ohne Supabase. */
 export function AccountSettings({ account }: { account: Account | null }) {
   const [deleting, setDeleting] = useState(false)
 
@@ -30,7 +32,7 @@ export function AccountSettings({ account }: { account: Account | null }) {
       <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6">
         <PageHeader
           title="Konto & Daten"
-          description="Mit welcher Adresse du angemeldet bist und wie du dein Konto mit allen Daten löschst."
+          description="Mit welcher Adresse du dich anmeldest, dein Passwort und wie du dein Konto mit allen Daten löschst."
         />
 
         {account ? (
@@ -38,7 +40,7 @@ export function AccountSettings({ account }: { account: Account | null }) {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Anmeldung</CardTitle>
-                <CardDescription>Ocuris schickt dir zum Anmelden einen Link an diese Adresse.</CardDescription>
+                <CardDescription>Mit dieser Adresse und deinem Passwort meldest du dich bei Ocuris an.</CardDescription>
               </CardHeader>
               <CardContent>
                 <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-[8rem_1fr]">
@@ -53,6 +55,8 @@ export function AccountSettings({ account }: { account: Account | null }) {
                 </dl>
               </CardContent>
             </Card>
+
+            <PasswordCard email={account.email} />
 
             <Card>
               <CardHeader>
@@ -91,6 +95,154 @@ export function AccountSettings({ account }: { account: Account | null }) {
 
       {account ? <DeleteAccountDialog email={account.email} open={deleting} onClose={() => setDeleting(false)} /> : null}
     </ScrollArea>
+  )
+}
+
+type PasswordField = 'current' | 'next'
+
+/**
+ * Passwort ändern — nur mit dem aktuellen, eine offene Sitzung allein reicht
+ * nicht. Wer keins hat (Konto aus der Zeit des Anmeldelinks, nur Google) oder
+ * es vergessen hat, bekommt einen Link, mit dem er eins festlegt.
+ */
+function PasswordCard({ email }: { email: string }) {
+  const [current, setCurrent] = useState('')
+  const [next, setNext] = useState('')
+  const [pending, setPending] = useState<'change' | 'link' | null>(null)
+  const [error, setError] = useState<{ field: PasswordField | 'link'; message: string } | null>(null)
+  const [linkSent, setLinkSent] = useState(false)
+
+  async function change(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (pending) return
+    if (!current) return setError({ field: 'current', message: 'Bitte gib dein aktuelles Passwort ein.' })
+    if (next.length < MIN_PASSWORD_LENGTH) {
+      return setError({ field: 'next', message: `Das neue Passwort braucht mindestens ${MIN_PASSWORD_LENGTH} Zeichen.` })
+    }
+    setPending('change')
+    setError(null)
+    const response = await fetch('/api/auth/password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ intent: 'change', currentPassword: current, password: next }),
+    }).catch(() => null)
+    setPending(null)
+    if (response?.ok) {
+      setCurrent('')
+      setNext('')
+      toast.success('Passwort geändert', { description: 'Ab jetzt meldest du dich mit dem neuen Passwort an.' })
+      return
+    }
+    const data = (await response?.json().catch(() => null)) as { error?: string } | null
+    setError({
+      // Falsches aktuelles Passwort gehört ans erste Feld, alles andere ans neue.
+      field: response?.status === 401 ? 'current' : 'next',
+      message: data?.error ?? (response ? 'Bitte versuche es erneut.' : 'Keine Verbindung zum Server. Bitte versuche es erneut.'),
+    })
+  }
+
+  async function sendLink() {
+    if (pending) return
+    setPending('link')
+    setError(null)
+    const response = await fetch('/api/auth/mail', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, kind: 'reset' }),
+    }).catch(() => null)
+    setPending(null)
+    if (response?.ok) return setLinkSent(true)
+    const data = (await response?.json().catch(() => null)) as { error?: string } | null
+    setError({ field: 'link', message: data?.error ?? 'Der Link konnte nicht versendet werden. Bitte versuche es erneut.' })
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Passwort</CardTitle>
+        <CardDescription>Ändere das Passwort, mit dem du dich anmeldest.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <form onSubmit={(event) => void change(event)} noValidate className="grid max-w-sm gap-4">
+          {/* Für Passwort-Manager: zu welchem Konto das Passwort gehört. */}
+          <input type="email" autoComplete="username" value={email} readOnly hidden />
+          <PasswordInput
+            id="current-password"
+            label="Aktuelles Passwort"
+            autoComplete="current-password"
+            value={current}
+            onChange={(value) => { setCurrent(value); if (error?.field === 'current') setError(null) }}
+            error={error?.field === 'current' ? error.message : null}
+            disabled={pending !== null}
+          />
+          <PasswordInput
+            id="new-password"
+            label="Neues Passwort"
+            autoComplete="new-password"
+            placeholder={`Mindestens ${MIN_PASSWORD_LENGTH} Zeichen`}
+            value={next}
+            onChange={(value) => { setNext(value); if (error?.field === 'next') setError(null) }}
+            error={error?.field === 'next' ? error.message : null}
+            disabled={pending !== null}
+          />
+          <div>
+            <Button type="submit" disabled={pending !== null} aria-busy={pending === 'change'}>
+              {pending === 'change' ? <><LoaderCircle className="animate-spin" />Wird gespeichert …</> : 'Passwort ändern'}
+            </Button>
+          </div>
+        </form>
+
+        <p className="border-t pt-4 text-sm text-pretty text-muted-foreground">
+          {linkSent ? (
+            <>Ein Link ist unterwegs an <span className="font-medium text-foreground">{email}</span>. Damit legst du ein neues Passwort fest.</>
+          ) : (
+            <>
+              Noch kein Passwort oder vergessen?{' '}
+              <button
+                type="button"
+                onClick={() => void sendLink()}
+                disabled={pending !== null}
+                className="rounded-sm text-foreground underline underline-offset-4 outline-none hover:no-underline focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-50"
+              >
+                {pending === 'link' ? 'Wird gesendet …' : 'Link zum Festlegen schicken'}
+              </button>
+            </>
+          )}
+        </p>
+        {error?.field === 'link' ? <p role="alert" className="text-sm text-pretty text-destructive">{error.message}</p> : null}
+      </CardContent>
+    </Card>
+  )
+}
+
+function PasswordInput({ id, label, autoComplete, placeholder, value, onChange, error, disabled }: {
+  id: string
+  label: string
+  autoComplete: 'current-password' | 'new-password'
+  placeholder?: string
+  value: string
+  onChange: (value: string) => void
+  error: string | null
+  disabled: boolean
+}) {
+  return (
+    <label htmlFor={id} className="block text-xs text-muted-foreground">
+      {label}
+      <Input
+        id={id}
+        type="password"
+        autoComplete={autoComplete}
+        maxLength={MAX_PASSWORD_LENGTH}
+        placeholder={placeholder}
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? `${id}-error` : undefined}
+        className="mt-2 h-10 text-foreground"
+      />
+      {error ? <span id={`${id}-error`} role="alert" className="mt-1.5 block text-sm text-pretty text-destructive">{error}</span> : null}
+    </label>
   )
 }
 

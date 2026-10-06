@@ -61,6 +61,15 @@ export function ChapterMarker({
   className?: string
 }) {
   const entry = chapter(id)
+  return <MarkerLine lead={timecode(entry.start)} label={label ?? entry.label} className={className} />
+}
+
+/**
+ * Die Marke ohne Kapitel: vorn eine kurze Kennung im Blau (bei Kapiteln die
+ * Startzeit, sonst z. B. eine Schrittnummer), dahinter der Text. Für Seiten,
+ * die nicht das lange Video der Landingpage sind.
+ */
+export function MarkerLine({ lead, label, className }: { lead: string; label: string; className?: string }) {
   return (
     <p
       className={cn(
@@ -70,10 +79,10 @@ export function ChapterMarker({
     >
       <span aria-hidden className="h-3.5 w-0.5 rounded-full bg-brand" />
       <span aria-hidden className="text-brand tabular-nums">
-        {timecode(entry.start)}
+        {lead}
       </span>
       <span aria-hidden className="h-px w-6 bg-white/25" />
-      <span>{label ?? entry.label}</span>
+      <span>{label}</span>
     </p>
   )
 }

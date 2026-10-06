@@ -5,6 +5,7 @@ export interface PublishingCapability {
   configured: boolean
   canAutoPublish: boolean
   notice: string | null
+  publicDirectPost?: boolean
 }
 
 export type PublishingCapabilities = Record<SocialPlatform, PublishingCapability>

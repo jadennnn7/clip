@@ -29,24 +29,37 @@ const FIELD = cn(
 /** Supabase lässt pro Adresse etwa eine Mail pro Minute zu. */
 const RESEND_SECONDS = 60
 
+/**
+ * Warum der Server abgelehnt hat (`lib/server/auth-limits.ts`): `cooldown` —
+ * an die Adresse ging gerade eine Mail; `email_limit` — Mails sind gerade
+ * ausgelastet, Google geht trotzdem.
+ */
+type Reason = 'cooldown' | 'email_limit' | 'requests'
+
 class FieldFailure extends Error {
-  constructor(readonly field: Field, message: string) {
+  constructor(readonly field: Field, message: string, readonly reason?: Reason, readonly retryAfter?: number) {
     super(message)
   }
 }
 
-const OFFLINE = 'Keine Verbindung zum Server. Prüfe deine Internetverbindung und versuche es erneut.'
+type FailureBody = { error?: string; reason?: Reason; retryAfter?: number }
 
-async function requestLink(email: string, intent: AuthIntent, fullName?: string): Promise<void> {
-  const response = await fetch('/api/auth/login', {
+const OFFLINE = 'Keine Verbindung zum Server. Prüfe deine Internetverbindung und versuche es erneut.'
+const FAILED = 'Die Anfrage ist fehlgeschlagen. Bitte versuche es erneut.'
+
+/** `reset`: Link zum Zurücksetzen des Passworts. `confirm`: Bestätigungsmail erneut. */
+type MailKind = 'reset' | 'confirm'
+
+async function requestMail(email: string, kind: MailKind): Promise<void> {
+  const response = await fetch('/api/auth/mail', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, intent, ...(fullName ? { fullName } : {}) }),
+    body: JSON.stringify({ email, kind }),
   }).catch(() => null)
   if (!response) throw new FieldFailure('email', OFFLINE)
   if (response.ok) return
-  const data = (await response.json().catch(() => null)) as { error?: string } | null
-  throw new FieldFailure('email', data?.error ?? 'Die Anfrage ist fehlgeschlagen. Bitte versuche es erneut.')
+  const data = (await response.json().catch(() => null)) as FailureBody | null
+  throw new FieldFailure('email', data?.error ?? FAILED, data?.reason, data?.retryAfter)
 }
 
 /** `signedIn`: weiter ins Dashboard. `confirm`: Bestätigungslink ist unterwegs. */
@@ -57,11 +70,11 @@ async function submitPassword(body: Record<string, string>): Promise<'signedIn' 
     body: JSON.stringify(body),
   }).catch(() => null)
   if (!response) throw new FieldFailure('form', OFFLINE)
-  const data = (await response.json().catch(() => null)) as { signedIn?: boolean; confirm?: boolean; error?: string } | null
+  const data = (await response.json().catch(() => null)) as ({ signedIn?: boolean; confirm?: boolean } & FailureBody) | null
   if (response.ok) return data?.signedIn ? 'signedIn' : 'confirm'
-  const message = data?.error ?? 'Die Anfrage ist fehlgeschlagen. Bitte versuche es erneut.'
   // Vergebene Adresse gehört ans E-Mail-Feld, falsche Zugangsdaten ans Passwort.
-  throw new FieldFailure(response.status === 409 ? 'email' : response.status >= 500 || response.status === 429 ? 'form' : 'password', message)
+  const field = response.status === 409 ? 'email' : response.status >= 500 || response.status === 429 ? 'form' : 'password'
+  throw new FieldFailure(field, data?.error ?? FAILED, data?.reason, data?.retryAfter)
 }
 
 /** Nach der Anmeldung dorthin, wo man hinwollte — nur Pfade auf dieser Seite. */
@@ -71,14 +84,15 @@ function destination(): string {
 }
 
 /**
- * Anmelden und Registrieren: mit Google, mit E-Mail und Passwort oder — für
- * Konten ohne Passwort und bei vergessenem Passwort — per Anmeldelink.
+ * Anmelden und Registrieren: mit Google oder mit E-Mail und Passwort. Einen
+ * Anmeldelink ohne Passwort gibt es nicht; wer sein Passwort vergessen hat,
+ * bekommt einen Link, mit dem er ein neues festlegt.
  *
  * Fehler stehen am Feld, nicht in einem Toast: Dort schaut man hin, und sie
  * verschwinden nicht, bevor man sie gelesen hat. Die Registrierung fragt
  * zusätzlich nach dem Namen — Sidebar und Begrüßung zeigen sonst nur den
  * Teil der Mail-Adresse vor dem @. Geht eine Mail hinaus (Bestätigung oder
- * Anmeldelink), ersetzt die Bestätigung das Formular — mit der Adresse und
+ * Zurücksetzen), ersetzt die Bestätigung das Formular — mit der Adresse und
  * einem zweiten Versuch, sobald Supabase ihn zulässt.
  */
 export function AuthForm({
@@ -94,11 +108,12 @@ export function AuthForm({
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  // Nur beim Anmelden: Passwort oder Anmeldelink.
-  const [method, setMethod] = useState<'password' | 'link'>('password')
+  // Nur beim Anmelden: mit Passwort oder — vergessen — Link zum Zurücksetzen.
+  const [method, setMethod] = useState<'password' | 'reset'>('password')
   const [pending, setPending] = useState<'form' | 'google' | null>(null)
-  const [error, setError] = useState<{ field: Field; message: string } | null>(null)
-  const [sent, setSent] = useState<{ to: string; kind: 'link' | 'confirm' } | null>(null)
+  // `google`: der Ausweg, wenn Bestätigungsmails gerade nicht rausgehen — ein Klick statt suchen.
+  const [error, setError] = useState<{ field: Field; message: string; google?: boolean } | null>(null)
+  const [sent, setSent] = useState<{ to: string; kind: MailKind } | null>(null)
   const [resendAt, setResendAt] = useState(0)
   const [now, setNow] = useState(0)
   const nameRef = useRef<HTMLInputElement>(null)
@@ -128,26 +143,35 @@ export function AuthForm({
   const secondsLeft = Math.max(0, Math.ceil((resendAt - now) / 1000))
 
   function fail(cause: unknown) {
-    const field = cause instanceof FieldFailure ? cause.field : 'form'
-    const message = cause instanceof Error && cause.message ? cause.message : 'Die Anfrage ist fehlgeschlagen. Bitte versuche es erneut.'
-    setError({ field, message })
+    const failure = cause instanceof FieldFailure ? cause : null
+    const field = failure?.field ?? 'form'
+    const message = cause instanceof Error && cause.message ? cause.message : FAILED
+    // Bestätigungsmails ausgelastet: Mit Google klappt die Registrierung ohne Mail.
+    const google = failure?.reason === 'email_limit' && isSignup
+    setError({ field, message, google })
+    // Gerade erst gesendet: Der Knopf zählt herunter, statt erneut abgelehnt zu werden.
+    if (failure?.reason === 'cooldown' && failure.retryAfter) startResendTimer(failure.retryAfter)
     // Zurück ins Feld, damit man es gleich korrigieren kann.
-    if (field === 'email') emailRef.current?.focus()
+    if (field === 'email' && !google) emailRef.current?.focus()
     if (field === 'password') passwordRef.current?.focus()
   }
 
-  function startResendTimer() {
+  function startResendTimer(seconds = RESEND_SECONDS) {
     const sentAt = Date.now()
     setNow(sentAt)
-    setResendAt(sentAt + RESEND_SECONDS * 1000)
+    setResendAt(sentAt + seconds * 1000)
   }
 
-  async function sendLink(address: string) {
+  const errorAction = () => error?.google
+    ? <GoogleFallback onClick={() => void continueWithGoogle()} />
+    : null
+
+  async function sendMail(address: string, kind: MailKind) {
     setPending('form')
     setError(null)
     try {
-      await requestLink(address, intent, isSignup ? name.trim() : undefined)
-      setSent({ to: address, kind: 'link' })
+      await requestMail(address, kind)
+      setSent({ to: address, kind })
       startResendTimer()
     } catch (cause) {
       fail(cause)
@@ -221,7 +245,7 @@ export function AuthForm({
       return
     }
     if (!usesPassword) {
-      void sendLink(address)
+      void sendMail(address, 'reset')
       return
     }
     if (!password) {
@@ -237,7 +261,7 @@ export function AuthForm({
     void sendPassword(address)
   }
 
-  function switchMethod(next: 'password' | 'link') {
+  function switchMethod(next: 'password' | 'reset') {
     setMethod(next)
     setError(null)
   }
@@ -254,13 +278,16 @@ export function AuthForm({
             {confirm ? 'Bestätige deine E-Mail' : 'Prüfe dein Postfach'}
           </h1>
           <p className="mt-2.5 text-[15px] leading-6 text-pretty text-white/60">
-            {confirm ? 'Wir haben einen Bestätigungslink an' : 'Wir haben einen Anmeldelink an'}{' '}
+            {confirm ? 'Wir haben einen Bestätigungslink an' : 'Falls es ein Konto mit'}{' '}
             <span className="font-medium break-all text-white">{sent.to}</span>{' '}
-            {confirm ? 'geschickt. Ein Klick darauf, und dein Konto ist bereit.' : 'geschickt. Öffne ihn in diesem Browser.'}
+            {confirm
+              ? 'geschickt. Ein Klick darauf, und dein Konto ist bereit.'
+              : 'gibt, ist ein Link zum Zurücksetzen unterwegs. Öffne ihn in diesem Browser und leg ein neues Passwort fest.'}
           </p>
         </div>
 
         {error ? <FieldError id="resend-error">{error.message}</FieldError> : null}
+        {errorAction()}
 
         <div className="mt-8 flex flex-col gap-2.5">
           <Button
@@ -268,8 +295,7 @@ export function AuthForm({
             variant="outline"
             className="h-11 w-full rounded-xl text-[15px]"
             disabled={pending !== null || secondsLeft > 0}
-            // Auch nach der Registrierung: Ein Anmeldelink bestätigt die Adresse mit.
-            onClick={() => void sendLink(sent.to)}
+            onClick={() => void sendMail(sent.to, sent.kind)}
           >
             {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <RotateCw className="size-4" aria-hidden />}
             {secondsLeft > 0 ? `Erneut senden in ${secondsLeft} s` : 'Link erneut senden'}
@@ -281,9 +307,10 @@ export function AuthForm({
             onClick={() => {
               setSent(null)
               setError(null)
+              if (!confirm) setMethod('password')
             }}
           >
-            Andere E-Mail-Adresse verwenden
+            {confirm ? 'Andere E-Mail-Adresse verwenden' : 'Zurück zur Anmeldung'}
           </Button>
         </div>
 
@@ -378,6 +405,7 @@ export function AuthForm({
           className={FIELD}
         />
         {error?.field === 'email' ? <FieldError id="email-error">{error.message}</FieldError> : null}
+        {error?.field === 'email' ? errorAction() : null}
 
         {usesPassword ? (
           <div className="mt-5">
@@ -388,7 +416,7 @@ export function AuthForm({
               {!isSignup ? (
                 <button
                   type="button"
-                  onClick={() => switchMethod('link')}
+                  onClick={() => switchMethod('reset')}
                   className="rounded-sm text-xs text-white/55 underline-offset-4 outline-none hover:text-white hover:underline focus-visible:ring-2 focus-visible:ring-white/50"
                 >
                   Passwort vergessen?
@@ -428,39 +456,49 @@ export function AuthForm({
           </div>
         ) : (
           <p className="mt-3 text-[13px] leading-5 text-pretty text-white/55">
-            Wir schicken dir einen Anmeldelink — damit kommst du auch ohne Passwort hinein.
+            Wir schicken dir einen Link, mit dem du ein neues Passwort festlegst.
           </p>
         )}
 
         {error?.field === 'form' ? <FieldError id="form-error">{error.message}</FieldError> : null}
+        {error?.field === 'form' ? errorAction() : null}
 
         <Button
           type="submit"
           variant="prominent"
           className="mt-5 h-11 w-full rounded-xl text-[15px]"
-          disabled={pending !== null}
+          // Gerade erst ein Link raus: Supabase lehnt bis zum Ablauf ohnehin ab.
+          disabled={pending !== null || (!usesPassword && secondsLeft > 0)}
           aria-busy={pending === 'form'}
         >
           {pending === 'form' ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
           {pending === 'form'
             ? usesPassword ? 'Einen Moment …' : 'Wird gesendet …'
-            : isSignup ? 'Kostenlos registrieren' : usesPassword ? 'Anmelden' : 'Anmeldelink senden'}
-          {pending === 'form' ? null : <ArrowRight className="size-4" aria-hidden />}
+            : isSignup ? 'Kostenlos registrieren' : usesPassword ? 'Anmelden'
+              : secondsLeft > 0 ? `Neuer Link in ${secondsLeft} s` : 'Link zum Zurücksetzen senden'}
+          {pending === 'form' || (!usesPassword && secondsLeft > 0) ? null : <ArrowRight className="size-4" aria-hidden />}
         </Button>
       </form>
 
       {!isSignup ? (
-        <p className="mt-5 text-center text-[13px] text-white/55">
-          <button
-            type="button"
-            onClick={() => switchMethod(method === 'password' ? 'link' : 'password')}
-            className="rounded-sm underline-offset-4 outline-none hover:text-white hover:underline focus-visible:ring-2 focus-visible:ring-white/50"
-          >
-            {method === 'password' ? 'Lieber ohne Passwort? Anmeldelink senden' : 'Mit Passwort anmelden'}
-          </button>
-        </p>
+        method === 'reset' ? (
+          <p className="mt-5 text-center text-[13px] text-white/55">
+            <button
+              type="button"
+              onClick={() => switchMethod('password')}
+              className="rounded-sm underline-offset-4 outline-none hover:text-white hover:underline focus-visible:ring-2 focus-visible:ring-white/50"
+            >
+              Zurück zur Anmeldung mit Passwort
+            </button>
+          </p>
+        ) : null
       ) : (
         <p className="mt-6 text-center text-xs leading-5 text-pretty text-white/45">
+          Für Ocuris gelten die{' '}
+          <Link href="/agb" className="underline underline-offset-4 hover:text-white">
+            Nutzungsbedingungen
+          </Link>
+          .{' '}
           Wie wir mit deinen Daten umgehen, steht in der{' '}
           <Link href="/datenschutz" className="underline underline-offset-4 hover:text-white">
             Datenschutzerklärung
@@ -504,11 +542,121 @@ function Notice({ notice }: { notice: AuthNotice }) {
   )
 }
 
+/** Der Ausweg unter der Fehlermeldung, wenn Bestätigungsmails gerade nicht rausgehen. */
+function GoogleFallback({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mt-2 inline-flex h-9 items-center gap-2 rounded-lg bg-white/[0.08] px-3 text-[13px] font-medium text-white outline-none transition-colors hover:bg-white/[0.12] focus-visible:ring-2 focus-visible:ring-white/50"
+    >
+      <GoogleMark />Mit Google fortfahren
+      <ArrowRight className="size-3.5" aria-hidden />
+    </button>
+  )
+}
+
 function FieldError({ id, children }: { id: string; children: ReactNode }) {
   return (
     <p id={id} role="alert" className="mt-2 flex items-start gap-1.5 text-[13px] leading-5 text-destructive">
       <CircleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />
       {children}
     </p>
+  )
+}
+
+/**
+ * Neues Passwort festlegen — das Ziel des Links nach „Passwort vergessen?".
+ *
+ * Der Link hat schon angemeldet; hier wird nur noch das Passwort gesetzt.
+ * Danach geht es ins Dashboard, wie nach jeder Anmeldung.
+ */
+export function NewPasswordForm({ email }: { email: string }) {
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const passwordRef = useRef<HTMLInputElement>(null)
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (pending) return
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(`Das Passwort braucht mindestens ${MIN_PASSWORD_LENGTH} Zeichen.`)
+      passwordRef.current?.focus()
+      return
+    }
+    setPending(true)
+    setError(null)
+    try {
+      await submitPassword({ intent: 'update', password })
+      // Voller Seitenwechsel wie nach der Anmeldung: Der Server liest die frischen Session-Cookies.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+      window.location.assign('/dashboard')
+    } catch (cause) {
+      setError(cause instanceof Error && cause.message ? cause.message : FAILED)
+      setPending(false)
+      passwordRef.current?.focus()
+    }
+  }
+
+  return (
+    <div className="w-full max-w-sm">
+      <h1 className="font-display text-[2rem] leading-tight font-semibold tracking-[-0.03em]">Neues Passwort</h1>
+      <p className="mt-2.5 text-[15px] leading-6 text-pretty text-white/60">
+        Leg ein neues Passwort für <span className="font-medium break-all text-white">{email}</span> fest. Damit meldest du dich ab jetzt an.
+      </p>
+
+      <form onSubmit={handleSubmit} noValidate className="mt-8">
+        {/* Für Passwort-Manager: zu welchem Konto das neue Passwort gehört. */}
+        <input type="email" autoComplete="username" value={email} readOnly hidden />
+        <label htmlFor="new-password" className="text-sm font-medium text-white/85">
+          Neues Passwort
+        </label>
+        <div className="relative">
+          <input
+            ref={passwordRef}
+            id="new-password"
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="new-password"
+            minLength={MIN_PASSWORD_LENGTH}
+            maxLength={MAX_PASSWORD_LENGTH}
+            required
+            autoFocus
+            value={password}
+            onChange={(event) => {
+              setPassword(event.target.value)
+              setError(null)
+            }}
+            placeholder={`Mindestens ${MIN_PASSWORD_LENGTH} Zeichen`}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? 'new-password-error' : undefined}
+            className={cn(FIELD, 'pr-11')}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((value) => !value)}
+            aria-label={showPassword ? 'Passwort verbergen' : 'Passwort anzeigen'}
+            aria-pressed={showPassword}
+            className="absolute top-1/2 right-1.5 mt-1 flex size-8 -translate-y-1/2 items-center justify-center rounded-lg text-white/45 outline-none transition-colors hover:text-white focus-visible:ring-2 focus-visible:ring-white/50"
+          >
+            {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+          </button>
+        </div>
+        {error ? <FieldError id="new-password-error">{error}</FieldError> : null}
+
+        <Button
+          type="submit"
+          variant="prominent"
+          className="mt-5 h-11 w-full rounded-xl text-[15px]"
+          disabled={pending}
+          aria-busy={pending}
+        >
+          {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+          {pending ? 'Wird gespeichert …' : 'Passwort speichern'}
+          {pending ? null : <ArrowRight className="size-4" aria-hidden />}
+        </Button>
+      </form>
+    </div>
   )
 }

@@ -38,10 +38,10 @@ export default function BillingPageClient() {
   const { usage, loading: usageLoading, error: usageError } = useBillingUsage()
   const subscribed = (usage?.monthlyCredits ?? 0) > 0
   const reference = subscribed ? usage!.monthlyCredits : TRIAL.credits
-  // Ohne eigene Wahl zeigt die Seite die Laufzeit des laufenden Abos.
+  // Ohne eigene Wahl zeigt die Seite die Laufzeit des laufenden Abos — sonst standardmäßig jährlich.
   const [pickedInterval, setPickedInterval] = useState<BillingInterval | null>(null)
   const yearlyAvailable = usage?.yearlyAvailable ?? false
-  const interval: BillingInterval = yearlyAvailable ? pickedInterval ?? usage?.interval ?? 'month' : 'month'
+  const interval: BillingInterval = yearlyAvailable ? pickedInterval ?? usage?.interval ?? 'year' : 'month'
 
   const handleCheckout = async (key: string, request: CheckoutRequest) => {
     setLoading(key)
